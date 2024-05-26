@@ -3,45 +3,58 @@ package com.example.monsterfindrapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.monsterfindrapp.ui.theme.MonsterFindrAppTheme
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.monsterfindrapp.view.AdminDashboardScreen
+import com.example.monsterfindrapp.view.HandleNotificationScreen
+import com.example.monsterfindrapp.view.ItemsScreen
+import com.example.monsterfindrapp.view.LoginRegisterScreen
+import com.example.monsterfindrapp.view.MapScreen
+import com.example.monsterfindrapp.view.RequestEntryScreen
+import com.example.monsterfindrapp.view.RequestsScreen
+import com.example.monsterfindrapp.view.UsersScreen
+import com.example.monsterfindrapp.viewModel.AdminDashboardViewModel
+import com.example.monsterfindrapp.viewModel.HandleNotificationViewModel
+import com.example.monsterfindrapp.viewModel.ItemsViewModel
+import com.example.monsterfindrapp.viewModel.LoginRegisterViewModel
+import com.example.monsterfindrapp.viewModel.MapViewModel
+import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
+import com.example.monsterfindrapp.viewModel.RequestsViewModel
+import com.example.monsterfindrapp.viewModel.UsersViewModel
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            MonsterFindrAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+            val navController = rememberNavController()
+            NavHost(navController = navController, startDestination = "AdminDashboardScreen"){
+                composable("LoginRegisterScreen"){
+                    LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
+                }
+                composable("MapScreen"){
+                    MapScreen(navController = navController, MapViewModel())
+                }
+                composable("RequestEntryScreen"){
+                    RequestEntryScreen(navController = navController, RequestEntryViewModel())
+                }
+                composable("HandleNotificationScreen"){
+                    HandleNotificationScreen(navController = navController, HandleNotificationViewModel())
+                }
+                composable("AdminDashboardScreen"){
+                    AdminDashboardScreen(navController = navController, AdminDashboardViewModel())
+                }
+                composable("UsersScreen"){
+                    UsersScreen(navController = navController, UsersViewModel())
+                }
+                composable("ItemsScreen"){
+                    ItemsScreen(navController = navController, ItemsViewModel())
+                }
+                composable("RequestsScreen"){
+                    RequestsScreen(navController = navController, RequestsViewModel())
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MonsterFindrAppTheme {
-        Greeting("Android")
     }
 }
