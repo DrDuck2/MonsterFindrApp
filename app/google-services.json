@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1046717076329",
+    "project_id": "monsterfindr",
+    "storage_bucket": "monsterfindr.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046717076329:android:e2202aa15ee46e136be3f8",
+        "android_client_info": {
+          "package_name": "com.example.monsterfindrapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJGb7WT8jmt7Wdj0E887sjO0CYMjgjIfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
