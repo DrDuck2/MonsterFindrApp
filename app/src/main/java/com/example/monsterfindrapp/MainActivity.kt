@@ -3,6 +3,7 @@ package com.example.monsterfindrapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -27,9 +28,10 @@ import com.example.monsterfindrapp.viewModel.UsersViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val itemsViewModel = ViewModelProvider(this)[ItemsViewModel::class.java]
         setContent {
             val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = "AdminDashboardScreen"){
+            NavHost(navController = navController, startDestination = "UsersScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
                 }
@@ -49,7 +51,7 @@ class MainActivity : ComponentActivity() {
                     UsersScreen(navController = navController, UsersViewModel())
                 }
                 composable("ItemsScreen"){
-                    ItemsScreen(navController = navController, ItemsViewModel())
+                    ItemsScreen(navController = navController, itemsViewModel)
                 }
                 composable("RequestsScreen"){
                     RequestsScreen(navController = navController, RequestsViewModel())

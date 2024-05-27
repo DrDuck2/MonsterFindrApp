@@ -18,7 +18,7 @@ object AuthenticationManager {
     }
 
     fun getCurrentUserId(): String? {
-        return currentUserId
+        return auth.currentUser?.uid
     }
 
 }

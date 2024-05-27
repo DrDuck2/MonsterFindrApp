@@ -73,7 +73,14 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
                 Text("Error: ${(loginState as LoginState.Error).message}")
             }
             is LoginState.Success ->{
-                navController.navigate("MapScreen")
+                viewModel.checkUserIsAdmin { isAdmin ->
+                    if(isAdmin){
+                        navController.navigate("AdminDashboardScreen")
+                    }
+                    else{
+                        navController.navigate("MapScreen")
+                    }
+                }
             }
             else -> { /* Do Nothing */}
         }

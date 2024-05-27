@@ -1,14 +1,19 @@
 package com.example.monsterfindrapp.viewModel
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.monsterfindrapp.AuthenticationManager
 import com.example.monsterfindrapp.model.LoginState
 import com.example.monsterfindrapp.model.RegisterState
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -58,6 +63,32 @@ class LoginRegisterViewModel : ViewModel() {
             } catch (e: Exception) {
                 _loginState.value = LoginState.Error(e.message ?: "Unknown Error")
             }
+        }
+    }
+
+    fun checkUserIsAdmin(callback: (Boolean) -> Unit){
+        CoroutineScope(Dispatchers.Main).launch {
+            val isAdmin = userIsAdmin()
+            callback(isAdmin)
+        }
+    }
+
+    private suspend fun userIsAdmin(): Boolean{
+        if(!AuthenticationManager.isUserAuthenticated()){
+            return false
+        }
+        val uid = AuthenticationManager.getCurrentUserId()
+        val db = FirebaseFirestore.getInstance()
+        return try{
+            val userDocument = uid?.let { db.collection("Users").document(it).get().await() }
+            if(userDocument?.exists() == true){
+                userDocument.getBoolean("isAdmin") ?: false
+            }else{
+                false
+            }
+        }catch (e: Exception){
+            e.printStackTrace()
+            false
         }
     }
 }
