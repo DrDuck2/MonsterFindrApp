@@ -29,9 +29,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val itemsViewModel = ViewModelProvider(this)[ItemsViewModel::class.java]
+        val requestEntryViewModel = ViewModelProvider(this)[RequestEntryViewModel::class.java]
         setContent {
             val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = "UsersScreen"){
+            NavHost(navController = navController, startDestination = "MapScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
                 }
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
                     MapScreen(navController = navController, MapViewModel())
                 }
                 composable("RequestEntryScreen"){
-                    RequestEntryScreen(navController = navController, RequestEntryViewModel())
+                    RequestEntryScreen(navController = navController, requestEntryViewModel)
                 }
                 composable("HandleNotificationScreen"){
                     HandleNotificationScreen(navController = navController, HandleNotificationViewModel())

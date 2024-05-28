@@ -223,7 +223,7 @@ fun AddItemModal(onDismiss: () -> Unit,
 }
 
 @Composable
-fun rememberPermissionLauncher(
+private fun rememberPermissionLauncher(
     itemsViewModel: ItemsViewModel,
     context: Context
 ): ActivityResultLauncher<String> {
@@ -239,7 +239,7 @@ fun rememberPermissionLauncher(
 }
 
 @Composable
-fun rememberPickImageLauncher(
+private fun rememberPickImageLauncher(
     itemsViewModel: ItemsViewModel
 ): ActivityResultLauncher<Intent> {
     return rememberLauncherForActivityResult(
