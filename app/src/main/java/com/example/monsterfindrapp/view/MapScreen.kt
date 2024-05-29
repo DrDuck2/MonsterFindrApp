@@ -1,9 +1,8 @@
 package com.example.monsterfindrapp.view
 
-import android.graphics.Bitmap
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,14 +16,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,16 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
 import coil.size.Scale
 import com.example.monsterfindrapp.R
-import com.example.monsterfindrapp.model.Locations
-import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.SideMenuItem
 import com.example.monsterfindrapp.model.StoreItem
-import com.example.monsterfindrapp.viewModel.ItemsViewModel
 import com.example.monsterfindrapp.viewModel.MapViewModel
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -59,12 +51,10 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.rememberMarkerState
-import com.google.android.gms.maps.CameraUpdateFactory
 
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MapScreen(navController: NavController, viewModel: MapViewModel) {
     val context = LocalContext.current
@@ -78,10 +68,13 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
             if (viewModel.logout()) navController.navigate("LoginRegisterScreen")
         }
     )
-    val mapMarkers by viewModel.locations.collectAsState()
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(45.55111 ,18.69389), 15f)
     }
+
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val filteredLocations by viewModel.getFilteredLocations(searchQuery).collectAsState(initial = emptyList())
+
     val selectedLocation by viewModel.selectedLocation
     val isMapExpanded by viewModel.isMapExpanded
 
@@ -102,7 +95,9 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
                 showSideMenu = showSideMenu,
                 onMenuClick = { showSideMenu = !showSideMenu },
                 navController = navController,
-                menuItems = mapMenuItems
+                menuItems = mapMenuItems,
+                searchQuery = searchQuery,
+                onSearchQueryChange = {query -> viewModel.updateSearchQuery(query)}
             )
         }
         Row(
@@ -120,10 +115,10 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
                     viewModel.isMapExpanded.value = true
                 }
             ){
-                mapMarkers.forEach{ storeLocation ->
+                filteredLocations.forEach{ storeLocation ->
                     val position = LatLng(storeLocation.location.latitude, storeLocation.location.longitude)
                     Marker(
-                        state = rememberMarkerState(position = position),
+                        state = MarkerState(position = position),
                         title = storeLocation.name,
                         icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED),
                         onClick = {

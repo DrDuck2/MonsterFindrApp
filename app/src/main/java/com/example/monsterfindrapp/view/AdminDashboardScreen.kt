@@ -38,10 +38,14 @@ fun AdminDashboardScreen(navController: NavController, viewModel: AdminDashboard
             if (viewModel.logout()) navController.navigate("LoginRegisterScreen")
         }
     )
+
+    // Change this too:
     ScreenHeader(
         showSideMenu = showSideMenu,
         onMenuClick = { showSideMenu = !showSideMenu },
         navController = navController,
-        menuItems = mapMenuItems
+        menuItems = mapMenuItems,
+        searchQuery = "",
+        onSearchQueryChange = {}
     )
 }

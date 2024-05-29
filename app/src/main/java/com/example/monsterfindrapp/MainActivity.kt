@@ -14,6 +14,7 @@ import com.example.monsterfindrapp.view.LoginRegisterScreen
 import com.example.monsterfindrapp.view.MapScreen
 import com.example.monsterfindrapp.view.RequestEntryScreen
 import com.example.monsterfindrapp.view.RequestsScreen
+import com.example.monsterfindrapp.view.SelectLocationScreen
 import com.example.monsterfindrapp.view.UsersScreen
 import com.example.monsterfindrapp.viewModel.AdminDashboardViewModel
 import com.example.monsterfindrapp.viewModel.HandleNotificationViewModel
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
         val requestEntryViewModel = ViewModelProvider(this)[RequestEntryViewModel::class.java]
         setContent {
             val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = "MapScreen"){
+            NavHost(navController = navController, startDestination = "RequestsScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
                 }
@@ -56,6 +57,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("RequestsScreen"){
                     RequestsScreen(navController = navController, RequestsViewModel())
+                }
+                composable("SelectLocationScreen"){
+                    SelectLocationScreen(navController = navController, requestEntryViewModel)
                 }
             }
         }

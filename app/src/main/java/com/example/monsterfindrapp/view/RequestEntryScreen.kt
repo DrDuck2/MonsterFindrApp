@@ -3,6 +3,7 @@ package com.example.monsterfindrapp.view
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,48 +41,81 @@ import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
 
 @Composable
 fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryViewModel){
-    var location by remember { mutableStateOf("") }
-    var drinkType by remember { mutableStateOf("") }
+
+    // Setting text for the picked Location ( from the map or current )
+    var locationText by remember { mutableStateOf("") }
+
+    // Locations, Location (just lat and long (of type: Location )) ,MonsterItem, Availability, Price, Image Uri
+    val selectedStoreLocation by viewModel.selectedLocation.collectAsState(null)
+    val location by viewModel.location.collectAsState(null)
+    val selectedDrink by viewModel.selectedDrink.collectAsState(null)
     var availability by remember { mutableStateOf("Moderate") }
     var price by remember { mutableStateOf("") }
-
-    var expandAvailability by remember { mutableStateOf(false)}
-    var expandDrinkType by remember {mutableStateOf(false)}
-    val drinkTypes by viewModel.monsterItems.collectAsState()
     val selectedImageUri by viewModel.selectedImageUri.observeAsState()
 
+    // Expanding Certain DropDownMenus
+    var expandAvailability by remember { mutableStateOf(false) }
+    var expandDrinkType by remember { mutableStateOf(false) }
+
+    // Fetching Drink Types from the Database
+    val drinkTypes by viewModel.monsterItems.collectAsState()
+
+    // Current Location and Image Pickers
     val context = LocalContext.current
-    val requestPermissionLauncher = rememberPermissionLauncher(viewModel, context)
+    val locationPermissionLauncher = rememberLocationPermissionLauncher(viewModel, context)
+    val imagePermissionLauncher = rememberPermissionLauncher(viewModel, context)
     val pickImageLauncher = rememberPickImageLauncher(viewModel)
+
+    selectedStoreLocation?.let { storeLocation ->
+        locationText = storeLocation.name
+    }
 
     LaunchedEffect(Unit) {
         viewModel.initializeLaunchers(pickImageLauncher)
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize(),
+    Column(
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
-    ){
-
-        TextField(
-            value = location,
-            onValueChange = {
-                location = it },
-            label = {Text("Location")}
-        )
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            TextField(
+                value = locationText,
+                onValueChange = { locationText = it },
+                label = { Text("Location") },
+                readOnly = true
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row{
+                Button(onClick = {
+                    navController.navigate("SelectLocationScreen")
+                }) {
+                    Text("Select Location")
+                }
+                Button(onClick = {
+                    viewModel.checkAndRequestLocationPermission(context, locationPermissionLauncher)
+                    locationText = if(location == null){
+                        ""
+                    }else "Current Location"
+                }) {
+                    Text("Current Location")
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center){
-            Box(
-                contentAlignment = Alignment.CenterEnd
-            ){
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(contentAlignment = Alignment.CenterEnd) {
                 TextField(
-                    value = drinkType,
-                    onValueChange = {drinkType = it},
-                    label = {Text("Drink Type")},
+                    value = if(selectedDrink == null) "" else selectedDrink!!.name,
+                    onValueChange = { },
+                    label = { Text("Drink Type") },
                     readOnly = true
                 )
                 Box(
@@ -109,7 +143,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                                 items(drinkTypes) { type ->
                                     DropdownMenuItem(
                                         onClick = {
-                                            drinkType = type.name
+                                            viewModel.selectDrink(type)
                                             expandDrinkType = false
                                         }
                                     ) {
@@ -134,12 +168,10 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center){
-            Box(
-                contentAlignment = Alignment.CenterEnd
-            ){
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(contentAlignment = Alignment.CenterEnd) {
                 TextField(
                     value = availability,
                     onValueChange = { availability = it },
@@ -181,47 +213,50 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
         Spacer(modifier = Modifier.height(16.dp))
         TextField(
             value = price,
-            onValueChange = {price = it},
-            label = {Text("Price")},
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-            ),
+            onValueChange = { price = it },
+            label = { Text("Price") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             leadingIcon = {
                 Text(
                     text = "€",
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                    )
+                    style = TextStyle(fontSize = 18.sp)
                 )
             }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            viewModel.checkAndRequestPermission(context,requestPermissionLauncher)
-        },
+        Button(
+            onClick = {
+                viewModel.checkAndRequestPermissionImages(context, imagePermissionLauncher)
+            },
             shape = CircleShape,
             modifier = Modifier.padding(16.dp)
         ) {
             Text("Select Picture")
         }
-        selectedImageUri?.let { uri ->
-            Image(
-                painter = rememberAsyncImagePainter(uri),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(200.dp)
-                    .padding(16.dp)
-            )
-        }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = {
-            navController.popBackStack()
-        }){
+            viewModel.submitEntry(selectedStoreLocation!!, selectedDrink!!, availability, price, selectedImageUri!! )
+        }) {
             Text("Submit Entry")
         }
     }
 }
 
+@Composable
+private fun rememberLocationPermissionLauncher(
+    requestEntryViewModel: RequestEntryViewModel,
+    context: Context
+): ActivityResultLauncher<String> {
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            requestEntryViewModel.getCurrentLocation(context)
+        } else {
+            // Handle permission denial
+        }
+    }
+}
 
 @Composable
 private fun rememberPermissionLauncher(
@@ -253,3 +288,4 @@ private fun rememberPickImageLauncher(
         }
     }
 }
+

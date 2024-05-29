@@ -79,7 +79,7 @@ dependencies {
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.media3.common)
     implementation(libs.transportation.consumer)
-
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
 
     implementation(libs.maps.compose)

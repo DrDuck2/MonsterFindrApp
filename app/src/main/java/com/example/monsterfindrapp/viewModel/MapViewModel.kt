@@ -8,25 +8,49 @@ import com.example.monsterfindrapp.AuthenticationManager
 import com.example.monsterfindrapp.model.Locations
 import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.StoreItem
+import com.example.monsterfindrapp.model.User
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class MapViewModel : ViewModel() {
 
     private val _locations = MutableStateFlow<List<Locations>>(emptyList())
-    val locations: StateFlow<List<Locations>> = _locations.asStateFlow()
+    //val locations: StateFlow<List<Locations>> = _locations.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     val selectedLocation = mutableStateOf<Locations?>(null)
     val isMapExpanded = mutableStateOf(true)
+
+
+    fun updateSearchQuery(query: String){
+        _searchQuery.value = query
+    }
+
+    fun getFilteredLocations(query: String): Flow<List<Locations>> {
+        return if(query.isEmpty()){
+            _locations.asStateFlow()
+        }else{
+            _locations.asStateFlow().map {locations ->
+                locations.filter {location ->
+                    location.items.any {it.monsterItem.name.contains(query, ignoreCase = true)}
+                }
+            }
+        }
+    }
 
     init {
         viewModelScope.launch() {
@@ -49,7 +73,6 @@ class MapViewModel : ViewModel() {
             snapshot.documents.map { document ->
                 val name = document.id
                 val location = document.getGeoPoint("coordinates")!!
-                Log.i("Name", name)
                 val items = getItemsForLocation(db, name)
                 Locations(
                     name = name,
@@ -67,7 +90,6 @@ class MapViewModel : ViewModel() {
             val availability = document.getString("availability")!!
             val lastUpdated = document.getTimestamp("last_updated")!!.toDate()
             val monsterItemId = document.id
-            Log.i("Monster Id", monsterItemId)
             val monsterItem = getMonsterItem(db, monsterItemId)
             StoreItem(
                 price = price,
@@ -80,10 +102,12 @@ class MapViewModel : ViewModel() {
 
     private suspend fun getMonsterItem(db: FirebaseFirestore, monsterItemId: String): MonsterItem {
         val monsterItemSnapshot = db.collection("MonsterItems").document(monsterItemId).get().await()
+        val id = monsterItemSnapshot.id
         val name = monsterItemSnapshot.getString("name")!!
         val description = monsterItemSnapshot.getString("desc")!!
         val imageUrl = monsterItemSnapshot.getString("image")!!
         return MonsterItem(
+            id = id,
             name = name,
             description = description,
             imageUrl = imageUrl

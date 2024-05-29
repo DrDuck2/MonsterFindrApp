@@ -66,6 +66,7 @@ class ItemsViewModel(application: Application): AndroidViewModel(application) {
             snapshot.documents.map { document ->
                 val data = document.data
                 MonsterItem(
+                    document.id,
                     data?.get("name") as? String ?: "",
                     data?.get("desc") as? String ?: "",
                     data?.get("image") as? String ?: ""
