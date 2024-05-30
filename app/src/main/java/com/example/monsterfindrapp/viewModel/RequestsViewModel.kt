@@ -13,11 +13,16 @@ import com.example.monsterfindrapp.model.RequestUser
 import com.example.monsterfindrapp.model.User
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.firestore.toObject
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -27,18 +32,34 @@ class RequestsViewModel: ViewModel() {
     private val _requests = MutableStateFlow<List<RequestUser>>(emptyList())
     val requests: StateFlow<List<RequestUser>> = _requests
 
-    private val _selectedUser = MutableStateFlow<List<RequestLocations>>(emptyList())
-    val selectedUser: StateFlow<List<RequestLocations>> = _selectedUser
+    private val _selectedUser = MutableStateFlow<RequestUser?>(null)
+    val selectedUser: StateFlow<RequestUser?> = _selectedUser
+
+    private val _locations = MutableStateFlow<List<GeoPoint>>(emptyList())
+    val locations: StateFlow<List<GeoPoint>> = _locations.asStateFlow()
+
+    private val _selectedRequest = MutableStateFlow<RequestLocations?>(null)
+    val selectedRequest: StateFlow<RequestLocations?> = _selectedRequest.asStateFlow()
+
 
     fun selectUser(user: RequestUser) {
-        _selectedUser.value = user.requestLocations
+        _selectedUser.value = user
+    }
+
+    fun selectRequest(location: RequestLocations){
+        _selectedRequest.value = location
     }
 
 
     init {
-        viewModelScope.launch() {
+        viewModelScope.launch {
             getRequests().collect { items ->
                 _requests.value = items
+            }
+        }
+        viewModelScope.launch {
+            getLocations().collect { locations ->
+                _locations.value = locations
             }
         }
     }
@@ -89,5 +110,67 @@ class RequestsViewModel: ViewModel() {
             user.isSuspended -> Color(0xFFFFFF00)
             else -> Color.White
         }
+    }
+
+    private fun getLocations(): Flow<List<GeoPoint>> {
+        val db = FirebaseFirestore.getInstance()
+        return db.collection("Locations").snapshots().map { snapshot ->
+            snapshot.documents.map { document ->
+                GeoPoint(
+                    document.getGeoPoint("coordinates")!!.latitude,
+                    document.getGeoPoint("coordinates")!!.longitude
+                )
+            }
+        }
+    }
+
+    fun removeRequest(user: RequestUser, request: RequestLocations){
+        viewModelScope.launch {
+            try{
+                val db = Firebase.firestore
+//                val storage = FirebaseStorage.getInstance()
+
+                val requestsCollection = db.collection("RequestEntries").document(user.id).collection("Requests")
+                val requestDoc = requestsCollection.document(request.id)
+                requestDoc.delete().await()
+
+//                val proofImageUrl = request.imageProof
+//                if(proofImageUrl.isNotEmpty()){
+//                    val storageReference = storage.getReferenceFromUrl(proofImageUrl)
+//                    try{
+//                        storageReference.delete().await()
+//                    }catch (e: Exception){
+//                        Log.e("DeleteRequestError", "Error deleting proof image: ${e.message}", e)
+//                    }
+//                }
+                // If successful remove the request from the user locally so no fetching is necessary
+                removeRequestFromUserLocally()
+
+            }catch (e: Exception){
+                Log.e("DeleteRequestError", "Error deleting request: ${e.message}", e)
+            }
+
+        }
+    }
+
+    private fun removeRequestFromUserLocally() {
+        _selectedRequest.value = null
+        _selectedUser.value = null
+        viewModelScope.launch {
+            getRequests().collect { items ->
+                _requests.value = items
+            }
+        }
+        viewModelScope.launch {
+            getLocations().collect { locations ->
+                _locations.value = locations
+            }
+        }
+
+    }
+
+
+    fun approveRequest(){
+
     }
 }

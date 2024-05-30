@@ -100,7 +100,7 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
                 onSearchQueryChange = {query -> viewModel.updateSearchQuery(query)}
             )
         }
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
         ){
             GoogleMap(

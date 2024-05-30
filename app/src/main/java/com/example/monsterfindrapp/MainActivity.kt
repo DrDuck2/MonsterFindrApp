@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
         val requestEntryViewModel = ViewModelProvider(this)[RequestEntryViewModel::class.java]
         setContent {
             val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = "RequestsScreen"){
+            NavHost(navController = navController, startDestination = "LoginRegisterScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
                 }
