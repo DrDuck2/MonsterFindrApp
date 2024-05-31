@@ -68,6 +68,8 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
             if (viewModel.logout()) navController.navigate("LoginRegisterScreen")
         }
     )
+
+
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(45.55111 ,18.69389), 15f)
     }

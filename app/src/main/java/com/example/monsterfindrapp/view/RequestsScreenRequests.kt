@@ -24,24 +24,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.monsterfindrapp.AuthenticationManager
-import com.example.monsterfindrapp.model.RequestUser
+import com.example.monsterfindrapp.model.RequestLocations
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
 
 @Composable
-fun RequestsScreen(navController: NavController, viewModel: RequestsViewModel) {
+fun RequestsScreenRequests(navController: NavController, viewModel: RequestsViewModel) {
 
-
-    val requests = viewModel.requests.collectAsState()
-
+    val selectedUser = viewModel.selectedUser.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 modifier = Modifier
                     .fillMaxWidth(),
-                title = {
-                    Text("Requests")
+                title = { Text("Requests")
                 },
             )
         },
@@ -52,33 +48,29 @@ fun RequestsScreen(navController: NavController, viewModel: RequestsViewModel) {
                     .padding(paddingValues),
                 contentPadding = PaddingValues(16.dp)
             ) {
-                items(requests.value) { request ->
-                    RequestUserCard(
-                        request,
-                        viewModel,
-                        onCardClick = {
-                            viewModel.selectUser(request)
-                            navController.navigate("RequestsScreenRequests")
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                selectedUser.value?.let {
+                    items(it.requestLocations) { locations ->
+                        RequestsCard(
+                            locations,
+                            onCardClick = {
+                                viewModel.selectRequest(locations)
+                                navController.navigate("RequestsScreenDetails")
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
-
             }
         }
     )
 }
 
-
-
-
 @Composable
-fun RequestUserCard(request: RequestUser, viewModel: RequestsViewModel, onCardClick: () -> Unit) {
+fun RequestsCard(request: RequestLocations, onCardClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
-        backgroundColor = viewModel.getUserColor(request.userInfo)
     ) {
         Row(
             modifier = Modifier
@@ -92,29 +84,19 @@ fun RequestUserCard(request: RequestUser, viewModel: RequestsViewModel, onCardCl
                     .padding(16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                androidx.compose.material.Text(
-                    text = "Email: " + request.userInfo.email,
+                Text(
+                    text = "Store: " + request.id,
                     fontWeight = FontWeight.Bold,
                     fontSize = MaterialTheme.typography.body1.fontSize
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material.Text(text = "Uid: " + request.userInfo.uid)
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            if (request.userInfo.isAdmin) {
-                if (request.userInfo.uid == AuthenticationManager.getCurrentUserId()) {
-                    Text(
-                        text = "ADMIN (YOU)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = MaterialTheme.typography.body1.fontSize
-                    )
-
-                } else {
-                    Text(
-                        text = "ADMIN", fontWeight = FontWeight.Bold,
-                        fontSize = MaterialTheme.typography.body1.fontSize
-                    )
-                }
+                Text(
+                    text = "Item: " + request.item
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Price: " + request.price.toString()
+                )
             }
         }
     }

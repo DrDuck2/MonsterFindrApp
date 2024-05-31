@@ -33,6 +33,8 @@ runtimeLivedata = "1.6.7"
 media3Common = "1.3.1"
 transportationConsumer = "2.2.0"
 toolsCore = "1.0.0-alpha08"
+firebaseFunctions = "21.0.0"
+firebaseMessaging = "24.0.0"
 
 [libraries]
 android-image-picker = { module = "com.github.skydoves:android-image-picker", version.ref = "androidImagePicker" }
@@ -74,6 +76,8 @@ androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtim
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3Common" }
 transportation-consumer = { group = "com.google.android.libraries.mapsplatform.transportation", name = "transportation-consumer", version.ref = "transportationConsumer" }
 androidx-tools-core = { group = "androidx.privacysandbox.tools", name = "tools-core", version.ref = "toolsCore" }
+firebase-functions = { group = "com.google.firebase", name = "firebase-functions", version.ref = "firebaseFunctions" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

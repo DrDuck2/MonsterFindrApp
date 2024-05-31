@@ -1,32 +1,30 @@
 package com.example.monsterfindrapp.viewModel
 
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import com.example.monsterfindrapp.AuthenticationManager
-import com.example.monsterfindrapp.model.Locations
-import com.example.monsterfindrapp.model.MonsterItem
+import com.example.monsterfindrapp.model.Notification
 import com.example.monsterfindrapp.model.RequestLocations
 import com.example.monsterfindrapp.model.RequestUser
 import com.example.monsterfindrapp.model.User
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.snapshots
-import com.google.firebase.firestore.toObject
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 
 class RequestsViewModel: ViewModel() {
     private val _requests = MutableStateFlow<List<RequestUser>>(emptyList())
@@ -36,10 +34,10 @@ class RequestsViewModel: ViewModel() {
     val selectedUser: StateFlow<RequestUser?> = _selectedUser
 
     private val _locations = MutableStateFlow<List<GeoPoint>>(emptyList())
-    val locations: StateFlow<List<GeoPoint>> = _locations.asStateFlow()
+    val locations: StateFlow<List<GeoPoint>> = _locations
 
     private val _selectedRequest = MutableStateFlow<RequestLocations?>(null)
-    val selectedRequest: StateFlow<RequestLocations?> = _selectedRequest.asStateFlow()
+    val selectedRequest: StateFlow<RequestLocations?> = _selectedRequest
 
 
     fun selectUser(user: RequestUser) {
@@ -50,14 +48,12 @@ class RequestsViewModel: ViewModel() {
         _selectedRequest.value = location
     }
 
-
     init {
         viewModelScope.launch {
             getRequests().collect { items ->
                 _requests.value = items
+                sortRequests()
             }
-        }
-        viewModelScope.launch {
             getLocations().collect { locations ->
                 _locations.value = locations
             }
@@ -85,7 +81,8 @@ class RequestsViewModel: ViewModel() {
                     availability = data?.get("availability") as? String ?: "",
                     item = data?.get("item") as? String ?: "",
                     price = (data?.get("price") as? Number)?.toDouble() ?: 0.0,
-                    imageProof = data?.get("proof_image") as? String ?: ""
+                    imageProof = data?.get("proof_image") as? String ?: "",
+                    created_at = (data?.get("created_at") as? Timestamp)?.toDate() ?: Date()
                 )
             }
             val userSnapshot = db.collection("Users").document(userId).get().await()
@@ -101,6 +98,16 @@ class RequestsViewModel: ViewModel() {
         }
 
         emit(allRequestUsers)
+    }
+
+    private fun sortRequests() {
+        val currentUserId = AuthenticationManager.getCurrentUserId()
+        _requests.value = _requests.value.sortedWith(
+            compareByDescending<RequestUser> { it.userInfo.uid == currentUserId }
+                .thenByDescending { it.userInfo.isAdmin }
+                .thenByDescending { it.userInfo.isSuspended }
+                .thenBy { it.userInfo.email }
+        )
     }
 
     fun getUserColor(user: User): Color {
@@ -124,27 +131,28 @@ class RequestsViewModel: ViewModel() {
         }
     }
 
-    fun removeRequest(user: RequestUser, request: RequestLocations){
+    fun removeRequest(user: RequestUser, request: RequestLocations, navController: NavController){
         viewModelScope.launch {
             try{
                 val db = Firebase.firestore
-//                val storage = FirebaseStorage.getInstance()
+                val storage = FirebaseStorage.getInstance()
 
                 val requestsCollection = db.collection("RequestEntries").document(user.id).collection("Requests")
+                Log.d("RemoveRequest", "Removing Request with id: ${request.id}")
                 val requestDoc = requestsCollection.document(request.id)
                 requestDoc.delete().await()
 
-//                val proofImageUrl = request.imageProof
-//                if(proofImageUrl.isNotEmpty()){
-//                    val storageReference = storage.getReferenceFromUrl(proofImageUrl)
-//                    try{
-//                        storageReference.delete().await()
-//                    }catch (e: Exception){
-//                        Log.e("DeleteRequestError", "Error deleting proof image: ${e.message}", e)
-//                    }
-//                }
+                val proofImageUrl = request.imageProof
+                if(proofImageUrl.isNotEmpty()){
+                    val storageReference = storage.getReferenceFromUrl(proofImageUrl)
+                    try{
+                        storageReference.delete().await()
+                    }catch (e: Exception){
+                        Log.e("DeleteRequestError", "Error deleting proof image: ${e.message}", e)
+                    }
+                }
                 // If successful remove the request from the user locally so no fetching is necessary
-                removeRequestFromUserLocally()
+                removeRequestFromUserLocally(user, request, navController)
 
             }catch (e: Exception){
                 Log.e("DeleteRequestError", "Error deleting request: ${e.message}", e)
@@ -153,24 +161,66 @@ class RequestsViewModel: ViewModel() {
         }
     }
 
-    private fun removeRequestFromUserLocally() {
+    private fun removeRequestFromUserLocally(user: RequestUser, request: RequestLocations,navController: NavController) {
+        _requests.value = _requests.value.map {requestUser ->
+            if(requestUser.id == user.id){
+                requestUser.copy(requestLocations = requestUser.requestLocations.filterNot { it.id == request.id })
+            }else{
+                requestUser
+            }
+        }
         _selectedRequest.value = null
         _selectedUser.value = null
-        viewModelScope.launch {
-            getRequests().collect { items ->
-                _requests.value = items
-            }
-        }
-        viewModelScope.launch {
-            getLocations().collect { locations ->
-                _locations.value = locations
-            }
-        }
-
+        navController.navigate("RequestsScreen")
     }
 
+    fun addLocationAndApproveRequest(user: RequestUser, request: RequestLocations,newId: String, navController: NavController){
+        val db = Firebase.firestore
 
-    fun approveRequest(){
+        viewModelScope.launch{
+            try{
+                val locationRef = db.collection("Locations").document(newId)
 
+                val location = hashMapOf(
+                    "coordinates" to request.coordinates
+                )
+                locationRef.set(location)
+                    .addOnSuccessListener {
+                        Log.d("AddLocationAndApproveRequest", "Location added successfully")
+                    }
+                    .addOnFailureListener{ e ->
+                        Log.e("AddLocationAndApproveRequest","Error adding location: ${e.message}", e)
+                    }
+                approveRequest(user, request,newId, navController)
+            }catch (e: Exception){
+                Log.e("AddLocationAndApproveRequest", "Error adding Location: ${e.message}", e)
+            }
+        }
+    }
+
+    fun approveRequest(user: RequestUser, request: RequestLocations,id: String, navController: NavController) {
+        val db = Firebase.firestore
+        viewModelScope.launch {
+            try {
+                val locationsCollection =
+                    db.collection("Locations").document(id).collection("Items")
+                        .document(request.item)
+                val entryData = hashMapOf(
+                    "price" to request.price,
+                    "availability" to request.availability,
+                    "last_updated" to request.created_at
+                )
+                locationsCollection.set(entryData)
+                    .addOnSuccessListener {
+                        Log.d("ApproveRequest", "Item updated/added successfully")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("ApproveRequest", "Error updating/adding item: ${e.message}", e)
+                    }
+            } catch (e: Exception) {
+                Log.e("ApproveRequest", "Error updating item: ${e.message}", e)
+            }
+            removeRequest(user, request, navController)
+        }
     }
 }

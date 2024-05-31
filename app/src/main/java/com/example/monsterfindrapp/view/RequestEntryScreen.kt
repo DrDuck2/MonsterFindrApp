@@ -43,7 +43,7 @@ import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
 fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryViewModel){
 
     // Setting text for the picked Location ( from the map or current )
-    var locationText by remember { mutableStateOf("") }
+    val locationText by viewModel.locationText.collectAsState("")
 
     // Locations, Location (just lat and long (of type: Location )) ,MonsterItem, Availability, Price, Image Uri
     val selectedStoreLocation by viewModel.selectedLocation.collectAsState(null)
@@ -67,7 +67,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     val pickImageLauncher = rememberPickImageLauncher(viewModel)
 
     selectedStoreLocation?.let { storeLocation ->
-        locationText = storeLocation.name
+        viewModel.setLocationText(storeLocation.name)
     }
 
     LaunchedEffect(Unit) {
@@ -85,7 +85,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
         ) {
             TextField(
                 value = locationText,
-                onValueChange = { locationText = it },
+                onValueChange = {  viewModel.setLocationText(it) },
                 label = { Text("Location") },
                 readOnly = true
             )
@@ -98,9 +98,6 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                 }
                 Button(onClick = {
                     viewModel.checkAndRequestLocationPermission(context, locationPermissionLauncher)
-                    locationText = if(location == null){
-                        ""
-                    }else "Current Location"
                 }) {
                     Text("Current Location")
                 }
@@ -235,7 +232,12 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = {
-            viewModel.submitEntry(selectedStoreLocation!!, selectedDrink!!, availability, price, selectedImageUri!! )
+            if(location == null){
+                viewModel.submitEntry(selectedStoreLocation!!, selectedDrink!!, availability, price, selectedImageUri!! )
+
+            }else{
+                viewModel.submitEntryCurrentLocation(location!!, selectedDrink!!, availability, price, selectedImageUri!! )
+            }
         }) {
             Text("Submit Entry")
         }

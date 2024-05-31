@@ -20,5 +20,6 @@ object AuthenticationManager {
     fun getCurrentUserId(): String? {
         return auth.currentUser?.uid
     }
+    
 
 }

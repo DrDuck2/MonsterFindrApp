@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.transportation.consumer)
     implementation(libs.play.services.location)
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.messaging)
     testImplementation(libs.junit)
 
     implementation(libs.maps.compose)

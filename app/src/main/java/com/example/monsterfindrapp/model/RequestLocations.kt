@@ -1,12 +1,14 @@
 package com.example.monsterfindrapp.model
 
 import com.google.firebase.firestore.GeoPoint
+import java.util.Date
 
 data class RequestLocations (
-    val id: String,
+    var id: String,
     val coordinates: GeoPoint,
     val availability: String,
     val item: String,
     val price: Double,
-    val imageProof: String
+    val imageProof: String,
+    val created_at: Date
 )

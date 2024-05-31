@@ -28,7 +28,8 @@ import com.example.monsterfindrapp.model.RegisterState
 @Composable
 fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterViewModel) {
     if(AuthenticationManager.isUserAuthenticated()){
-       navController.navigate("MapScreen")
+        viewModel.checkUserIsAdmin { navController.navigate("AdminDashboardScreen") }
+        navController.navigate("MapScreen")
     }
 
     var loginEmail by remember { mutableStateOf("") }
@@ -152,7 +153,7 @@ fun RegisterModal(
                     is RegisterState.Success ->{
                         viewModel.hideRegisterModal()
                     }
-                    else -> { Text("Nothing")}
+                    else -> { /* Do Nothing */ }
                 }
             }
         }

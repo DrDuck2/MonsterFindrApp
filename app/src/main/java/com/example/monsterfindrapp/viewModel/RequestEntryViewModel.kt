@@ -26,11 +26,14 @@ import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.StoreItem
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import com.google.type.Date
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,15 +123,21 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
             ) ==
                     PermissionChecker.PERMISSION_GRANTED
 
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val locationManager =
+                context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
             val isLocationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            val fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
+            val fusedLocationProviderClient =
+                LocationServices.getFusedLocationProviderClient(context)
 
-            if(isLocationEnabled){
-                fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
+            if (isLocationEnabled) {
+                fusedLocationProviderClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    null
+                ).addOnSuccessListener { location ->
                     _location.value = location
                     _selectedLocation.value = null
+                    setLocationText("Current Location")
                     Log.i("Location", "${location.latitude} ${location.longitude}")
                 }
             }else{
@@ -147,6 +156,13 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                 dialog.show()
             }
         }
+    }
+
+    private val _locationText = MutableStateFlow<String>("")
+    val locationText: StateFlow<String> = _locationText.asStateFlow()
+
+    fun setLocationText(text: String){
+        _locationText.value = text
     }
 
 
@@ -233,7 +249,8 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                         "availability" to availability,
                         "price" to price.toDouble(),
                         "coordinates" to storeLocation.location,
-                        "proof_image" to uri.toString()
+                        "proof_image" to uri.toString(),
+                        "created_at" to Timestamp.now()
                     )
 
                     AuthenticationManager.getCurrentUserId()?.let {
@@ -241,6 +258,43 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                             .document(it)
                             .collection("Requests")
                             .document(storeLocation.name)
+                            .set(entryData)
+                            .addOnSuccessListener {
+                                Log.i("RequestEntry", "Entry submitted successfully")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.i("RequestEntry", "Error submitting entry: $e")
+                            }
+                    }
+                }
+                    .addOnFailureListener { e ->
+                        Log.i("RequestEntry", "Error uploading proof image: $e")
+                    }
+            }
+    }
+
+    fun submitEntryCurrentLocation(currentLocation: Location, item: MonsterItem, availability: String, price: String, proofImage: Uri){
+        val storageRef = Firebase.storage.reference.child("RequestEntryImages/${UUID.randomUUID()}")
+
+        storageRef.putFile(proofImage)
+            .addOnSuccessListener {
+                storageRef.downloadUrl.addOnSuccessListener { uri->
+                    val db = Firebase.firestore
+
+                    val entryData = hashMapOf(
+                        "item" to item.id,
+                        "availability" to availability,
+                        "price" to price.toDouble(),
+                        "coordinates" to GeoPoint(currentLocation.latitude, currentLocation.longitude),
+                        "proof_image" to uri.toString(),
+                        "created_at" to Timestamp.now()
+                    )
+
+                    AuthenticationManager.getCurrentUserId()?.let {
+                        db.collection("RequestEntries")
+                            .document(it)
+                            .collection("Requests")
+                            .document("NewLocation - ${UUID.randomUUID()}")
                             .set(entryData)
                             .addOnSuccessListener {
                                 Log.i("RequestEntry", "Entry submitted successfully")
