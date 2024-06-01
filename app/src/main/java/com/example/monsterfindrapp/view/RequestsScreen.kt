@@ -21,8 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.monsterfindrapp.AuthenticationManager
 import com.example.monsterfindrapp.model.RequestUser
@@ -41,7 +45,12 @@ fun RequestsScreen(navController: NavController, viewModel: RequestsViewModel) {
                 modifier = Modifier
                     .fillMaxWidth(),
                 title = {
-                    Text("Requests")
+                    Text(
+                        text = "Users",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        color = Color.White
+                    )
                 },
             )
         },

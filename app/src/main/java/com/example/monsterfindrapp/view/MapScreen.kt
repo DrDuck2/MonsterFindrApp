@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Text
 import androidx.compose.material3.Card
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Scale
+import com.example.monsterfindrapp.AuthenticationManager
 import com.example.monsterfindrapp.R
 import com.example.monsterfindrapp.model.SideMenuItem
 import com.example.monsterfindrapp.model.StoreItem
@@ -53,10 +53,12 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
 
 
 @Composable
 fun MapScreen(navController: NavController, viewModel: MapViewModel) {
+
     val context = LocalContext.current
 
     var showSideMenu by remember { mutableStateOf(false) }
@@ -133,17 +135,20 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
                 }
             }
             if (!isMapExpanded && selectedLocation != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(0.5f)
-                        .padding(16.dp)
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
+                Row {
+                    Text(text = selectedLocation!!.name)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(0.5f)
+                            .padding(16.dp)
                     ) {
-                        items(selectedLocation!!.items) { item ->
-                            LocationCard(item)
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(selectedLocation!!.items) { item ->
+                                LocationCard(item)
+                            }
                         }
                     }
                 }
@@ -157,18 +162,18 @@ fun LocationCard(item: StoreItem) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(4.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier
                     .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ){
                 Image(
                     painter = rememberAsyncImagePainter(
@@ -182,24 +187,29 @@ fun LocationCard(item: StoreItem) {
                     ),
                     contentDescription = "Item Image",
                     modifier = Modifier
-                        .size(150.dp)
+                        .size(100.dp)
                         .aspectRatio(1f)
                 )
                 Spacer(modifier = Modifier.padding(8.dp))
                 Column{
                     Text(text = "Name: " +item.monsterItem.name,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp)
+                        fontSize = 15.sp
+                    )
                     Spacer(modifier = Modifier.padding(4.dp))
                     Text(text = "Price: " +item.price.toString(),
-                        fontWeight = FontWeight.Bold)
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp)
                     Spacer(modifier = Modifier.padding(4.dp))
-                    Text(text = "Availability: " +item.availability)
+                    Text(text = "Availability: " +item.availability,
+                        fontSize = 10.sp)
                     Spacer(modifier = Modifier.padding(4.dp))
-                    Text(text = item.monsterItem.description)
-                    Spacer(modifier = Modifier.padding(20.dp))
+                    Text(text = item.monsterItem.description,
+                        fontSize = 10.sp)
+                    Spacer(modifier = Modifier.padding(20.dp),)
                     Text(text = "Last Update: " +item.lastUpdated.toString(),
-                        fontWeight = FontWeight.Bold)
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp)
                 }
             }
         }

@@ -21,8 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.monsterfindrapp.model.RequestLocations
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
@@ -37,7 +39,13 @@ fun RequestsScreenRequests(navController: NavController, viewModel: RequestsView
             TopAppBar(
                 modifier = Modifier
                     .fillMaxWidth(),
-                title = { Text("Requests")
+                title = {
+                    Text(
+                    text = "Requests",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
                 },
             )
         },
@@ -55,7 +63,8 @@ fun RequestsScreenRequests(navController: NavController, viewModel: RequestsView
                             onCardClick = {
                                 viewModel.selectRequest(locations)
                                 navController.navigate("RequestsScreenDetails")
-                            }
+                            },
+                            viewModel
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -66,11 +75,12 @@ fun RequestsScreenRequests(navController: NavController, viewModel: RequestsView
 }
 
 @Composable
-fun RequestsCard(request: RequestLocations, onCardClick: () -> Unit) {
+fun RequestsCard(request: RequestLocations, onCardClick: () -> Unit, viewModel: RequestsViewModel) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
+        backgroundColor = viewModel.getRequestColor(request)
     ) {
         Row(
             modifier = Modifier

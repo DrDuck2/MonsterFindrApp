@@ -1,5 +1,9 @@
 package com.example.monsterfindrapp.view
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -11,30 +15,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavController
 import com.example.monsterfindrapp.viewModel.LoginRegisterViewModel
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.monsterfindrapp.AuthenticationManager
 import com.example.monsterfindrapp.model.LoginState
 import com.example.monsterfindrapp.model.RegisterState
 
 @Composable
 fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterViewModel) {
+    val activity = (LocalContext.current as? Activity)
     if(AuthenticationManager.isUserAuthenticated()){
         viewModel.checkUserIsAdmin { navController.navigate("AdminDashboardScreen") }
         navController.navigate("MapScreen")
+
+    // If user not logged in
+    }else{
+        // On Back press close the app
+        BackHandler {
+            activity?.finish()
+        }
     }
 
     var loginEmail by remember { mutableStateOf("") }
     var loginPassword by remember { mutableStateOf("") }
     val loginState by viewModel.loginState.collectAsState()
+
+    var showError by remember { mutableStateOf(false) }
+    val passwordVisible = remember { mutableStateOf(false) }
+
 
     Column(
         modifier = Modifier
@@ -53,10 +83,31 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
             value = loginPassword,
             onValueChange = { loginPassword = it },
             label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = if (passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val image = if(passwordVisible.value)
+                    Icons.Filled.Visibility
+                else Icons.Filled.VisibilityOff
+
+                IconButton(onClick = {
+                    passwordVisible.value = !passwordVisible.value
+                }) {
+                    Icon(imageVector = image, contentDescription = if (passwordVisible.value) "Hide password" else "Show password")
+                }
+            }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { viewModel.login(loginEmail, loginPassword) }) {
+        if (showError) {
+            Text(text = "Please fill in all fields", color = Color.Red)
+        }
+        Button(onClick = {
+            if(loginPassword.isEmpty() || loginEmail.isEmpty()){
+                showError = true
+            }else{
+                showError = false
+                viewModel.login(loginEmail, loginPassword)
+            }
+        }) {
             Text("Login")
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -110,6 +161,12 @@ fun RegisterModal(
 
     val registerState by viewModel.registerState.collectAsState()
 
+    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember {mutableStateOf("")}
+
+    val passwordVisible = remember { mutableStateOf(false) }
+    val repeatPasswordVisible = remember {mutableStateOf(false)}
+
     Dialog(onDismissRequest = onDismiss){
         Surface(color = MaterialTheme.colorScheme.background){
             Column(
@@ -130,17 +187,53 @@ fun RegisterModal(
                     value = registerPassword,
                     onValueChange = {registerPassword = it},
                     label = {Text("Password")},
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = if (passwordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if(passwordVisible.value)
+                            Icons.Filled.Visibility
+                        else Icons.Filled.VisibilityOff
+
+                        IconButton(onClick = {
+                            passwordVisible.value = !passwordVisible.value
+                        }) {
+                            Icon(imageVector = image, contentDescription = if (passwordVisible.value) "Hide password" else "Show password")
+                        }
+                    }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = repeatPassword,
                     onValueChange = {repeatPassword = it},
                     label = {Text("Repeat Password")},
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = if (repeatPasswordVisible.value) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if(repeatPasswordVisible.value)
+                            Icons.Filled.Visibility
+                        else Icons.Filled.VisibilityOff
+
+                        IconButton(onClick = {
+                            repeatPasswordVisible.value = !repeatPasswordVisible.value
+                        }) {
+                            Icon(imageVector = image, contentDescription = if (repeatPasswordVisible.value) "Hide password" else "Show password")
+                        }
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {onRegister(registerEmail, registerPassword, repeatPassword)}){
+                if (showError) {
+                    Text(text = errorMessage, color = Color.Red)
+                }
+                Button(onClick = {
+                    if(registerEmail.isEmpty() || registerPassword.isEmpty() || repeatPassword.isEmpty()){
+                        errorMessage = "Please fill in all fields"
+                        showError = true
+                    }else if(registerPassword != repeatPassword){
+                        errorMessage = "Passwords do not match"
+                        showError = true
+                    }else{
+                        showError = false
+                        onRegister(registerEmail, registerPassword, repeatPassword)
+                    }
+                }){
                     Text("Register")
                 }
                 when(registerState){

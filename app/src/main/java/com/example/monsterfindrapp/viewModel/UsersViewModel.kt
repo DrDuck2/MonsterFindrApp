@@ -1,5 +1,6 @@
 package com.example.monsterfindrapp.viewModel
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -11,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -24,6 +26,22 @@ class UsersViewModel : ViewModel() {
 
     private val _suspendDate = MutableLiveData<Date?>()
     val suspendDate: LiveData<Date?> = _suspendDate
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _isSuccess = MutableStateFlow(false)
+    val isSuccess: StateFlow<Boolean> = _isSuccess
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+
+    fun resetLoading(){
+        _isLoading.value = false
+        _isSuccess.value = false
+        _errorMessage.value = null
+    }
 
     fun getFilteredUsers(query: String, selectedFilter: String): Flow<List<User>> {
         return if (query.isEmpty() && (selectedFilter.isEmpty() || selectedFilter == "All")) {
@@ -97,18 +115,21 @@ class UsersViewModel : ViewModel() {
     }
 
     fun callSuspendUser(user:User){
+        _isLoading.value = true
         viewModelScope.launch {
             suspendUser(user)
         }
     }
 
     fun callBanUser(user:User){
+        _isLoading.value = true
         viewModelScope.launch {
             banUser(user)
         }
     }
 
     fun callUnSuspendUser(user: User){
+        _isLoading.value = true
         viewModelScope.launch {
             unSuspendUser(user)
         }
@@ -120,7 +141,7 @@ class UsersViewModel : ViewModel() {
         }
     }
 
-    private suspend fun suspendUser(user: User){
+    private fun suspendUser(user: User){
         val db = FirebaseFirestore.getInstance()
         //Reference to the Users Collection and Specific User from the card
         val userRef = db.collection("Users").document(user.uid)
@@ -128,21 +149,36 @@ class UsersViewModel : ViewModel() {
         val suspendedUsersRef = db.collection("SuspendedUsers").document(user.uid)
 
         //Set the user to suspended in Users collection
-        userRef.update("isSuspended", true).await()
+        userRef.update("isSuspended", true)
+            .addOnSuccessListener {
 
-        // Suspended time is set to 7 days from now
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.DATE, 7) // Add 7 days
-        val oneWeekFromNow = cal.time
+                Log.i("SuspendUser", "User Updated")
+                // Suspended time is set to 7 days from now
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DATE, 7) // Add 7 days
+                val oneWeekFromNow = cal.time
 
-        val suspendedUser = hashMapOf(
-            "suspendedDate" to oneWeekFromNow
-        )
-        // Place the new user in the suspended users collection
-        suspendedUsersRef.set(suspendedUser).await()
-        _suspendDate.value = oneWeekFromNow
+                val suspendedUser = hashMapOf(
+                    "suspendedDate" to oneWeekFromNow
+                )
+                // Place the new user in the suspended users collection
+                suspendedUsersRef.set(suspendedUser)
+                    .addOnSuccessListener {
+                        Log.i("SuspendUser", "User Added")
+                        _isSuccess.value = true
+                    }
+                    .addOnFailureListener{ e ->
+                        Log.w("SuspendUser", "Error adding user in Suspended Users Collection ${e.message})", e)
+                        _errorMessage.value = e.message ?: "\"Error Suspending User\""
+                    }
+                _suspendDate.value = oneWeekFromNow
+            }
+            .addOnFailureListener{ e ->
+                Log.w("SuspendUser", "Error Updating User in Users Collection ${e.message})", e)
+                _errorMessage.value = e.message ?: "\"Error Suspending User\""
+            }
     }
-    private suspend fun banUser(user: User){
+    private fun banUser(user: User){
         val db = FirebaseFirestore.getInstance()
         //Reference to the Users Collection and Specific User from the card
         val userRef = db.collection("Users").document(user.uid)
@@ -150,14 +186,28 @@ class UsersViewModel : ViewModel() {
         val removedUsersRef = db.collection("BannedUsers").document(user.uid)
 
         //Delete the user from the Users collection
-        userRef.delete().await()
-
-        val removedUser = hashMapOf(
-            "email" to user.email,
-            "isBanned" to true
-        )
-        // Place the new user in the banned users collection
-        removedUsersRef.set(removedUser).await()
+        userRef.delete()
+            .addOnSuccessListener {
+                Log.i("BanUser", "User Ref Deleted Successfully")
+                val removedUser = hashMapOf(
+                    "email" to user.email,
+                    "isBanned" to true
+                )
+                // Place the new user in the banned users collection
+                removedUsersRef.set(removedUser)
+                    .addOnSuccessListener {
+                        Log.i("BanUser", "User Added To Banned Users Collection Successfully")
+                        _isSuccess.value = true
+                    }
+                    .addOnFailureListener{ e->
+                        Log.w("BanUser", "Error adding user in Banned Users Collection ${e.message})", e)
+                        _errorMessage.value = e.message ?: "\"Error Banning User\""
+                    }
+            }
+            .addOnFailureListener{ e ->
+                Log.w("BanUser", "Error Deleting User in Users Collection ${e.message})", e)
+                _errorMessage.value = e.message ?: "\"Error Banning User\""
+            }
     }
 
     private suspend fun getSuspendDate(user: User): Date?{
@@ -176,14 +226,28 @@ class UsersViewModel : ViewModel() {
         }
     }
 
-    private suspend fun unSuspendUser(user: User){
+    private fun unSuspendUser(user: User){
         val db = FirebaseFirestore.getInstance()
 
         val userRef = db.collection("Users").document(user.uid)
-        userRef.update("isSuspended", false).await()
-
-        val suspendedUserRef = db.collection("SuspendedUsers").document(user.uid)
-        suspendedUserRef.delete().await()
+        userRef.update("isSuspended", false)
+            .addOnSuccessListener {
+                Log.i("UnSuspendUser", "Users Field Updated Successfully")
+                val suspendedUserRef = db.collection("SuspendedUsers").document(user.uid)
+                suspendedUserRef.delete()
+                    .addOnSuccessListener {
+                        Log.i("UnSuspendUser", "User Deleted From Suspended Users Collection Successfully")
+                        _isSuccess.value = true
+                    }
+                    .addOnFailureListener{ e->
+                        Log.w("UnSuspendUser", "Error Deleting User in Suspended Users Collection ${e.message})", e)
+                        _errorMessage.value = e.message ?: "\"Error Un Suspending User\""
+                    }
+            }
+            .addOnFailureListener{ e->
+                Log.w("UnSuspendUser", "Error Updating isSuspended User in Users Collection ${e.message})", e)
+                _errorMessage.value = e.message ?: "\"Error Un Suspending User\""
+            }
     }
 
 }

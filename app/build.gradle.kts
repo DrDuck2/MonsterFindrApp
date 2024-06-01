@@ -82,6 +82,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.firebase.functions)
     implementation(libs.firebase.messaging)
+    implementation(libs.androidx.material.icons.extended)
     testImplementation(libs.junit)
 
     implementation(libs.maps.compose)

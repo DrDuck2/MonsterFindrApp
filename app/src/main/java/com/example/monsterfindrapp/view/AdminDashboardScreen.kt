@@ -1,10 +1,13 @@
 package com.example.monsterfindrapp.view
 
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -13,8 +16,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.monsterfindrapp.AuthenticationManager
 import com.example.monsterfindrapp.R
 import com.example.monsterfindrapp.model.SideMenuItem
 import com.example.monsterfindrapp.viewModel.MapViewModel
@@ -30,9 +37,29 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
 
 @Composable
 fun AdminDashboardScreen(navController: NavController, viewModel: MapViewModel) {
+
+    val isMapExpanded by viewModel.isMapExpanded
+
+    if(!AuthenticationManager.isUserAuthenticated()) {
+        navController.navigate("LoginRegisterScreen")
+    }else{
+        BackHandler {
+            if(!isMapExpanded){
+                viewModel.isMapExpanded.value = true
+            }else{
+                viewModel.logout()
+                navController.navigate("LoginRegisterScreen")
+            }
+        }
+    }
+
+        // If user not logged in
+
+
     val context = LocalContext.current
 
     val cameraPositionState = rememberCameraPositionState {
@@ -42,12 +69,11 @@ fun AdminDashboardScreen(navController: NavController, viewModel: MapViewModel) 
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filteredLocations by viewModel.getFilteredLocations(searchQuery).collectAsState(initial = emptyList())
 
-    val selectedLocation by viewModel.selectedLocation
-    val isMapExpanded by viewModel.isMapExpanded
     val interactionSource = remember { MutableInteractionSource() }
 
-
     var showSideMenu by remember { mutableStateOf(false) }
+
+    val selectedLocation by viewModel.selectedLocation
 
     val mapMenuItems = listOf(
         SideMenuItem("Requests") { navController.navigate("RequestsScreen") },
@@ -67,7 +93,7 @@ fun AdminDashboardScreen(navController: NavController, viewModel: MapViewModel) 
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null
-                ){
+                ) {
                     viewModel.isMapExpanded.value = true
                 }
         ) {
@@ -98,7 +124,7 @@ fun AdminDashboardScreen(navController: NavController, viewModel: MapViewModel) 
                 filteredLocations.forEach{ storeLocation ->
                     val position = LatLng(storeLocation.location.latitude, storeLocation.location.longitude)
                     Marker(
-                        state = MarkerState(position = position),
+                        state = MarkerState(position),
                         title = storeLocation.name,
                         icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED),
                         onClick = {
@@ -109,19 +135,29 @@ fun AdminDashboardScreen(navController: NavController, viewModel: MapViewModel) 
                         }
                     )
                 }
+
             }
             if (!isMapExpanded && selectedLocation != null) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxHeight()
+                        .fillMaxSize()
                         .weight(0.5f)
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(selectedLocation!!.items) { item ->
-                            LocationCard(item)
+                    Text(text = selectedLocation!!.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box{
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(selectedLocation!!.items) { item ->
+                                LocationCard(item)
+                            }
                         }
                     }
                 }

@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.monsterfindrapp.AuthenticationManager
-import com.example.monsterfindrapp.model.Notification
 import com.example.monsterfindrapp.model.RequestLocations
 import com.example.monsterfindrapp.model.RequestUser
 import com.example.monsterfindrapp.model.User
@@ -39,9 +38,25 @@ class RequestsViewModel: ViewModel() {
     private val _selectedRequest = MutableStateFlow<RequestLocations?>(null)
     val selectedRequest: StateFlow<RequestLocations?> = _selectedRequest
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _isSuccess = MutableStateFlow(false)
+    val isSuccess: StateFlow<Boolean> = _isSuccess
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+
+    fun resetLoading(){
+        _isLoading.value = false
+        _isSuccess.value = false
+        _errorMessage.value = null
+    }
 
     fun selectUser(user: RequestUser) {
         _selectedUser.value = user
+        sortRequestLocations()
     }
 
     fun selectRequest(location: RequestLocations){
@@ -110,12 +125,26 @@ class RequestsViewModel: ViewModel() {
         )
     }
 
+    private fun sortRequestLocations(){
+        _selectedUser.value?.requestLocations = _selectedUser.value?.requestLocations?.sortedWith(
+            compareByDescending<RequestLocations> { !it.id.contains("NewLocation") }
+                .thenBy {it.created_at}
+        )!!
+    }
+
     fun getUserColor(user: User): Color {
         return when {
             user.isAdmin && user.uid == AuthenticationManager.getCurrentUserId() -> Color(0xFF90EE90)
             user.isAdmin -> Color(0xFFADD8E6)
             user.isSuspended -> Color(0xFFFFFF00)
             else -> Color.White
+        }
+    }
+
+    fun getRequestColor(request: RequestLocations): Color{
+        return when {
+            request.id.contains("NewLocation") -> Color(0xFF90EE90)
+            else -> Color(0xFFADD8E6)
         }
     }
 
@@ -131,7 +160,8 @@ class RequestsViewModel: ViewModel() {
         }
     }
 
-    fun removeRequest(user: RequestUser, request: RequestLocations, navController: NavController){
+    fun removeRequest(user: RequestUser, request: RequestLocations){
+        _isLoading.value = true
         viewModelScope.launch {
             try{
                 val db = Firebase.firestore
@@ -149,19 +179,21 @@ class RequestsViewModel: ViewModel() {
                         storageReference.delete().await()
                     }catch (e: Exception){
                         Log.e("DeleteRequestError", "Error deleting proof image: ${e.message}", e)
+                        _errorMessage.value = e.message ?: "\"Error Removing Request \""
                     }
                 }
                 // If successful remove the request from the user locally so no fetching is necessary
-                removeRequestFromUserLocally(user, request, navController)
+                removeRequestFromUserLocally(user, request)
 
             }catch (e: Exception){
                 Log.e("DeleteRequestError", "Error deleting request: ${e.message}", e)
+                _errorMessage.value = e.message ?: "\"Error Removing Request \""
             }
 
         }
     }
 
-    private fun removeRequestFromUserLocally(user: RequestUser, request: RequestLocations,navController: NavController) {
+    private fun removeRequestFromUserLocally(user: RequestUser, request: RequestLocations) {
         _requests.value = _requests.value.map {requestUser ->
             if(requestUser.id == user.id){
                 requestUser.copy(requestLocations = requestUser.requestLocations.filterNot { it.id == request.id })
@@ -169,12 +201,15 @@ class RequestsViewModel: ViewModel() {
                 requestUser
             }
         }
+        // Remove selection
         _selectedRequest.value = null
         _selectedUser.value = null
-        navController.navigate("RequestsScreen")
+        _isSuccess.value = true
     }
 
-    fun addLocationAndApproveRequest(user: RequestUser, request: RequestLocations,newId: String, navController: NavController){
+    fun addLocationAndApproveRequest(user: RequestUser, request: RequestLocations,newId: String){
+        _isLoading.value = true
+
         val db = Firebase.firestore
 
         viewModelScope.launch{
@@ -190,15 +225,18 @@ class RequestsViewModel: ViewModel() {
                     }
                     .addOnFailureListener{ e ->
                         Log.e("AddLocationAndApproveRequest","Error adding location: ${e.message}", e)
+                        _errorMessage.value = e.message ?: "\"Error Adding Entry \""
                     }
-                approveRequest(user, request,newId, navController)
+                approveRequest(user, request,newId)
             }catch (e: Exception){
                 Log.e("AddLocationAndApproveRequest", "Error adding Location: ${e.message}", e)
+                _errorMessage.value = e.message ?: "\"Error Adding Entry \""
+
             }
         }
     }
 
-    fun approveRequest(user: RequestUser, request: RequestLocations,id: String, navController: NavController) {
+    fun approveRequest(user: RequestUser, request: RequestLocations,id: String) {
         val db = Firebase.firestore
         viewModelScope.launch {
             try {
@@ -216,11 +254,13 @@ class RequestsViewModel: ViewModel() {
                     }
                     .addOnFailureListener { e ->
                         Log.e("ApproveRequest", "Error updating/adding item: ${e.message}", e)
+                        _errorMessage.value = e.message ?: "\"Error Adding Entry \""
                     }
             } catch (e: Exception) {
                 Log.e("ApproveRequest", "Error updating item: ${e.message}", e)
+                _errorMessage.value = e.message ?: "\"Error Adding Entry \""
             }
-            removeRequest(user, request, navController)
+            removeRequest(user, request)
         }
     }
 }

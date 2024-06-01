@@ -21,6 +21,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -39,6 +40,20 @@ class ItemsViewModel(application: Application): AndroidViewModel(application) {
     private val _monsterItems = MutableStateFlow<List<MonsterItem>>(emptyList())
     //val monsterItems: StateFlow<List<MonsterItem>> = _monsterItems.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _isSuccess = MutableStateFlow(false)
+    val isSuccess: StateFlow<Boolean> = _isSuccess
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    fun resetLoading(){
+        _isLoading.value = false
+        _isSuccess.value = false
+        _errorMessage.value = null
+    }
 
     fun getFilteredItems(query: String): Flow<List<MonsterItem>> {
         return if (query.isEmpty()) {
@@ -111,16 +126,25 @@ class ItemsViewModel(application: Application): AndroidViewModel(application) {
     }
 
     fun uploadImageAndSaveItem(itemName: String, itemDescription: String, imageUri: Uri){
+        _isLoading.value = true
         val storage = FirebaseStorage.getInstance()
 
         val imageRef: StorageReference = storage.getReference("MonsterStaticImageFolder/$itemName")
-        imageRef.putFile(imageUri).addOnSuccessListener {
-            taskSnapshot ->
-            taskSnapshot.storage.downloadUrl.addOnSuccessListener {
-                uri->
-                val imageUrl = uri.toString()
-                saveItemToDatabase(itemName, itemDescription, imageUrl)
+        imageRef.putFile(imageUri)
+            .addOnSuccessListener {
+                taskSnapshot ->
+                taskSnapshot.storage.downloadUrl
+                    .addOnSuccessListener {
+                        uri->
+                        val imageUrl = uri.toString()
+                        saveItemToDatabase(itemName, itemDescription, imageUrl)
+            }.addOnFailureListener{ e ->
+                        Log.w("UploadImageAndSaveItem", "Error Retrieving Image Url from Storage ${e.message})", e)
+                        _errorMessage.value = e.message ?: "\"Error Retrieving Image Url From Storage\""
             }
+        }.addOnFailureListener{ e ->
+                Log.w("UploadImageAndSaveItem", "Error Adding Image To Storage ${e.message})", e)
+                _errorMessage.value = e.message ?: "\"Error Adding Image To Storage\""
         }
     }
 
@@ -132,15 +156,41 @@ class ItemsViewModel(application: Application): AndroidViewModel(application) {
             "image" to imageUrl
         )
         db.collection("MonsterItems").document(itemName).set(newItem)
+            .addOnSuccessListener {
+                Log.i("SaveItemToDatabase", "Successfully Added Item")
+                _isSuccess.value = true
+            }
+            .addOnFailureListener { e->
+                Log.w("SaveItemToDatabase", "Error Adding Item to Database ${e.message})", e)
+                _errorMessage.value = e.message ?: "\"Error Adding Item From Database\""
+            }
     }
+    fun removeImageUri(){
+        _selectedImageUri.value = null
+    }
+
     fun removeItem(item: MonsterItem){
+        _isLoading.value = true
         val db = FirebaseFirestore.getInstance()
         val storage = FirebaseStorage.getInstance()
 
         val imageRef = storage.getReferenceFromUrl(item.imageUrl)
-        imageRef.delete().addOnSuccessListener {
+        imageRef.delete()
+            .addOnSuccessListener {
+            Log.i("RemoveItem", "Successfully Removed The Image")
             db.collection("MonsterItems").document(item.name).delete()
-        }
+                .addOnSuccessListener {
+                    _isSuccess.value = true
+                    Log.i("RemoveItem", "Successfully Removed Item")
+                }
+                .addOnFailureListener { e->
+                    Log.w("RemoveItem", "Error Removing Item ${e.message})", e)
+                    _errorMessage.value = e.message ?: "\"Error Removing Item From Database\""
+                }
+        }.addOnFailureListener { e->
+                Log.w("RemoveItem", "Error Removing Image ${e.message})", e)
+                _errorMessage.value = e.message ?: "\"Error Removing Image From Storage\""
+            }
     }
 
 }

@@ -99,8 +99,13 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
 
     private val _selectedImageUri = MutableLiveData<Uri?>()
     val selectedImageUri: LiveData<Uri?> = _selectedImageUri
+
     fun setImageUri(uri: Uri) {
         _selectedImageUri.value = uri
+    }
+
+    fun removeImageUri(){
+        _selectedImageUri.value = null
     }
 
     fun checkAndRequestLocationPermission(
@@ -236,7 +241,23 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
         )
     }
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _isSuccess = MutableStateFlow(false)
+    val isSuccess: StateFlow<Boolean> = _isSuccess
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    fun setLoading(value: Boolean){
+        _isLoading.value = value
+    }
+
     fun submitEntry(storeLocation: Locations, item: MonsterItem, availability: String, price: String, proofImage: Uri ){
+
+        _isLoading.value = true
+
         val storageRef = Firebase.storage.reference.child("RequestEntryImages/${UUID.randomUUID()}")
 
         storageRef.putFile(proofImage)
@@ -261,19 +282,24 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                             .set(entryData)
                             .addOnSuccessListener {
                                 Log.i("RequestEntry", "Entry submitted successfully")
+                                _isSuccess.value = true
                             }
                             .addOnFailureListener { e ->
                                 Log.i("RequestEntry", "Error submitting entry: $e")
+                                _errorMessage.value = e.message ?: "Error Submitting Entry"
                             }
                     }
                 }
                     .addOnFailureListener { e ->
                         Log.i("RequestEntry", "Error uploading proof image: $e")
+                        _errorMessage.value = e.message ?: "Error uploading image"
                     }
             }
     }
 
     fun submitEntryCurrentLocation(currentLocation: Location, item: MonsterItem, availability: String, price: String, proofImage: Uri){
+        _isLoading.value = true
+
         val storageRef = Firebase.storage.reference.child("RequestEntryImages/${UUID.randomUUID()}")
 
         storageRef.putFile(proofImage)
@@ -298,14 +324,17 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                             .set(entryData)
                             .addOnSuccessListener {
                                 Log.i("RequestEntry", "Entry submitted successfully")
+                                _isSuccess.value = true
                             }
                             .addOnFailureListener { e ->
-                                Log.i("RequestEntry", "Error submitting entry: $e")
+                                Log.w("RequestEntry", "Error submitting entry: $e")
+                                _errorMessage.value = e.message ?: "\"Error Adding Entry\""
                             }
                     }
                 }
                     .addOnFailureListener { e ->
-                        Log.i("RequestEntry", "Error uploading proof image: $e")
+                        Log.w("RequestEntry", "Error uploading proof image: $e")
+                        _errorMessage.value = e.message ?: "\"Error Adding Entry\""
                     }
             }
     }
