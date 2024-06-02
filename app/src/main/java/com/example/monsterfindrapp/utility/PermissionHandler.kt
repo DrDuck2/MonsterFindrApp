@@ -1,4 +1,4 @@
-package com.example.monsterfindrapp
+package com.example.monsterfindrapp.utility
 
 import android.Manifest
 import android.content.Context

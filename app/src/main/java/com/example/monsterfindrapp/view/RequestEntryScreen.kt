@@ -1,13 +1,5 @@
 package com.example.monsterfindrapp.view
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.util.Log
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,10 +13,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AddLocationAlt
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ImageSearch
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,82 +23,81 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
-import com.example.monsterfindrapp.AuthenticationManager
+import com.example.monsterfindrapp.utility.AuthenticationManager
+import com.example.monsterfindrapp.utility.LoadingStateManager
+import com.example.monsterfindrapp.utility.MonsterRepository
+import com.example.monsterfindrapp.utility.PermissionImageHandler
+import com.example.monsterfindrapp.utility.PermissionLocationHandler
 import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
-import kotlinx.coroutines.delay
 
 @Composable
-fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryViewModel){
+fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryViewModel, permissionLocationHandler: PermissionLocationHandler){
 
+    // UI VALUES
+
+    // If user is not authenticated redirect to Login Screen
     if(!AuthenticationManager.isUserAuthenticated()) {
         navController.navigate("LoginRegisterScreen")
     }
+    // Fetching Drink Types from the Database
+    val drinkTypes by MonsterRepository.monsterItems.collectAsState()
 
-    // Setting text for the picked Location ( from the map or current )
-    val locationText by viewModel.locationText.collectAsState("")
-
-    // Locations, Location (just lat and long (of type: Location )) ,MonsterItem, Availability, Price, Image Uri
-    val selectedStoreLocation by viewModel.selectedLocation.collectAsState(null)
-    val location by viewModel.location.collectAsState(null)
+    // Input Data
     val selectedDrink by viewModel.selectedDrink.collectAsState(null)
     var availability by remember { mutableStateOf("Moderate") }
     var price by remember { mutableStateOf("") }
-    val selectedImageUri by viewModel.selectedImageUri.observeAsState()
-
 
     // Expanding Certain DropDownMenus
     var expandAvailability by remember { mutableStateOf(false) }
     var expandDrinkType by remember { mutableStateOf(false) }
 
+    // Show Error for empty fields
     var isError by remember { mutableStateOf(false) }
 
-    val isLoading by viewModel.isLoading.collectAsState()
+    // Loading For Submit Entry
+    val isLoading by LoadingStateManager.isLoading.collectAsState()
 
-    val isLocationLoading by viewModel.isLocationLoading.collectAsState()
-    val isLocationSuccess by viewModel.isLocationSuccess.collectAsState()
-    val errorLocationMessage by viewModel.errorLocationMessage.collectAsState()
-
-    // Fetching Drink Types from the Database
-    val drinkTypes by viewModel.monsterItems.collectAsState()
-
-    // Current Location and Image Pickers
+    // Image Selection Handling
     val context = LocalContext.current
-    val locationPermissionLauncher = rememberLocationPermissionLauncher(viewModel, context)
-    val imagePermissionLauncher = rememberPermissionLauncher(viewModel, context)
-    val pickImageLauncher = rememberPickImageLauncher(viewModel)
+    val permissionImageHandler = remember { PermissionImageHandler(context, viewModel) }
+    val pickImageLauncher = PermissionImageHandler.rememberPickImageLauncher(permissionImageHandler)
+    val imagePermissionLauncher = PermissionImageHandler.rememberPermissionLauncher(permissionImageHandler, context)
+    val selectedImageUri by permissionImageHandler.selectedImageUri.observeAsState()
+    permissionImageHandler.initializeLaunchers(pickImageLauncher, imagePermissionLauncher)
 
+    // Location Selection Handling
+    val locationPermissionLauncher = PermissionLocationHandler.rememberLocationPermissionLauncher(permissionLocationHandler, context)
+    val location by permissionLocationHandler.location.collectAsState()
+    val locationText by permissionLocationHandler.locationText.collectAsState()
+    val selectedStoreLocation by permissionLocationHandler.selectedLocation.collectAsState(null)
     selectedStoreLocation?.let { storeLocation ->
-        viewModel.setLocationText(storeLocation.name)
+        permissionLocationHandler.setLocationText(storeLocation.name)
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.initializeLaunchers(pickImageLauncher)
-    }
 
+
+    // UI DESIGN
     if (isLoading) {
-        LoadingOverlay(viewModel,navController)
+        NavigateLoadingOverlay(
+            onNavigate = {
+                navController.popBackStack()
+            },
+            setAlpha = 0.5f
+        )
     }
 
     Column(
@@ -122,7 +111,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
         ) {
             OutlinedTextField(
                 value = locationText,
-                onValueChange = { viewModel.setLocationText(it) },
+                onValueChange = { permissionLocationHandler.setLocationText(it) },
                 readOnly = true,
                 enabled = false,
                 placeholder = { Text("Location") }
@@ -154,7 +143,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                 ) {
                     Button(
                         onClick = {
-                            viewModel.checkAndRequestLocationPermission(
+                            permissionLocationHandler.checkAndRequestLocationPermission(
                                 context,
                                 locationPermissionLauncher
                             )
@@ -174,27 +163,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    if (isLocationLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(30.dp),
-                            color = Color.Black
-                        )
-                    }
-                    if (isLocationSuccess) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = "Current Location",
-                            modifier = Modifier.size(24.dp),
-                            tint = Color.Green
-                        )
-                    }
-                    if (errorLocationMessage != null) {
-                        Text(
-                            text = "Error: $errorLocationMessage",
-                            fontSize = 16.sp,
-                            color = Color.Red
-                        )
-                    }
+                    SmallLoadingIconOverlay()
                 }
             }
         }
@@ -322,7 +291,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
         ) {
             Button(
                 onClick = {
-                    viewModel.checkAndRequestPermissionImages(context, imagePermissionLauncher)
+                    permissionImageHandler.checkAndRequestPermissionImages()
                 },
                 modifier = Modifier
                     .size(100.dp, 50.dp)
@@ -349,7 +318,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                 )
 
                 IconButton(
-                    onClick = { viewModel.removeImageUri() },
+                    onClick = { permissionImageHandler.removeImageUri() },
                     modifier = Modifier
                         .size(24.dp)
                         .clip(CircleShape)
@@ -409,116 +378,5 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     }
 }
 
-@Composable
-fun LoadingOverlay(viewModel: RequestEntryViewModel, navController: NavController) {
-    val isSuccess by viewModel.isSuccess.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
 
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .zIndex(10f),
-        color = Color.Black.copy(alpha = 0.5f),
-
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if(errorMessage != null){
-                Box(
-                    modifier = Modifier
-                        .background(Color.White)
-                        .fillMaxWidth()
-                ){
-                    Text(text = "Error: $errorMessage",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.Red,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            layout(placeable.width, placeable.height) {
-                                placeable.place((constraints.maxWidth - placeable.width) / 2, 0)
-                            }
-                        })
-                }
-                viewModel.setLoading(false)
-                navController.popBackStack()
-            }else if(isSuccess){
-                Box(
-                    modifier = Modifier
-                        .background(Color.White)
-                        .fillMaxWidth()
-                ){
-                    Text(text = "Entry Submitted",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 32.sp,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            layout(placeable.width, placeable.height) {
-                                placeable.place((constraints.maxWidth - placeable.width) / 2, 0)
-                            }
-                        })
-                }
-                viewModel.setLoading(false)
-                navController.popBackStack()
-            }else{
-                CircularProgressIndicator(
-                    modifier = Modifier.size(50.dp),
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
-@Composable
-private fun rememberLocationPermissionLauncher(
-    requestEntryViewModel: RequestEntryViewModel,
-    context: Context
-): ActivityResultLauncher<String> {
-    return rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            requestEntryViewModel.getCurrentLocation(context)
-        } else {
-            // Handle permission denial
-        }
-    }
-}
-
-@Composable
-private fun rememberPermissionLauncher(
-    requestEntryViewModel: RequestEntryViewModel,
-    context: Context
-): ActivityResultLauncher<String> {
-    return rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            requestEntryViewModel.launchImagePicker()
-        } else {
-            // Handle permission denial
-        }
-    }
-}
-
-@Composable
-private fun rememberPickImageLauncher(
-    requestEntryViewModel: RequestEntryViewModel
-): ActivityResultLauncher<Intent> {
-    return rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                requestEntryViewModel.setImageUri(uri)
-            }
-        }
-    }
-}
 

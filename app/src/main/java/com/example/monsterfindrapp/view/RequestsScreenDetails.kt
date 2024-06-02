@@ -3,9 +3,6 @@ package com.example.monsterfindrapp.view
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.indication
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,14 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
 import androidx.compose.material.TextField
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
@@ -39,32 +33,26 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.monsterfindrapp.utility.LoadingStateManager
+import com.example.monsterfindrapp.utility.MapLocationsRepository
 import com.example.monsterfindrapp.R
-import com.example.monsterfindrapp.viewModel.ItemsViewModel
-import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -77,27 +65,34 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Composable
 fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewModel) {
 
     val selectedRequest = viewModel.selectedRequest.collectAsState()
-    val selectedUser = viewModel.selectedUser.collectAsState()
-    val mapLocations by viewModel.locations.collectAsState()
+    val user = viewModel.user.collectAsState()
+
+    val mapLocations by MapLocationsRepository.getGeoPoints().collectAsState(initial = emptyList())
 
     var showLocation by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var showWarning by remember {mutableStateOf(false)}
 
     var isZoomed by remember {mutableStateOf(false)}
-    var scale = if (isZoomed) 2f else 1f
-
-    val isLoading by viewModel.isLoading.collectAsState()
-
+    val scale = if (isZoomed) 2f else 1f
     var requestWork by remember {mutableStateOf("")}
 
+    val isLoading by LoadingStateManager.isLoading.collectAsState()
+
     if(isLoading){
-        LoadingOverlay(viewModel,navController)
+        NavigateLoadingOverlay(
+            onNavigate = {
+                navController.navigate("RequestsScreen")
+            },
+            setAlpha = 1f
+        )
     }
 
     Scaffold(
@@ -155,8 +150,14 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    val latitude = selectedRequest.value?.coordinates?.latitude ?: Double.NaN
+                    val roundedLatitude = BigDecimal(latitude).setScale(4, RoundingMode.HALF_UP).toDouble()
+                    val longitude = selectedRequest.value?.coordinates?.longitude ?: Double.NaN
+                    val roundedLongitude= BigDecimal(longitude).setScale(4, RoundingMode.HALF_UP).toDouble()
+
+                    val coordinatesText = "$roundedLatitude, $roundedLongitude"
                     Text(
-                        text = "Coordinates: ${selectedRequest.value?.coordinates?.latitude ?: "N/A"}, ${selectedRequest.value?.coordinates?.longitude ?: "N/A"}",
+                        text = "Coordinates: $coordinatesText",
                         fontSize = 18.sp,
                         color = MaterialTheme.colors.onSurface
                     )
@@ -309,7 +310,7 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
         showDialog = showDialog,
         onDismiss = { showDialog = false},
         onSubmit = {
-            viewModel.addLocationAndApproveRequest(user = selectedUser.value!!, request = selectedRequest.value!!,it)
+            viewModel.addLocationAndApproveRequest(user =  user.value!!, request = selectedRequest.value!!,it)
         }
     )
     if(showWarning){
@@ -331,14 +332,14 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
                                 showDialog = true
                             } else {
                                 viewModel.approveRequest(
-                                    user = selectedUser.value!!,
+                                    user = user.value!!,
                                     request = selectedRequest.value!!,
                                     id = selectedRequest.value!!.id
                                 )
                             }
                         }else if(requestWork == "Remove Request") {
                             viewModel.removeRequest(
-                                user = selectedUser.value!!,
+                                user = user.value!!,
                                 request = selectedRequest.value!!
                             )
                         }
@@ -359,79 +360,6 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
     }
 }
 
-@Composable
-fun LoadingOverlay(viewModel: RequestsViewModel, navController: NavController) {
-    val isSuccess by viewModel.isSuccess.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
-
-    val interactionSource = remember { MutableInteractionSource() }
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .zIndex(10f)
-            .clickable(interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    navController.navigate("RequestsScreen")
-                    if (errorMessage != null || isSuccess) {
-                        viewModel.resetLoading()
-                    }
-                }),
-        color = Color.DarkGray,
-
-        ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (errorMessage != null) {
-                Box(
-                    modifier = Modifier
-                        .background(Color.White)
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Error: $errorMessage",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.Red,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            layout(placeable.width, placeable.height) {
-                                placeable.place((constraints.maxWidth - placeable.width) / 2, 0)
-                            }
-                        })
-                }
-            } else if (isSuccess) {
-                Box(
-                    modifier = Modifier
-                        .background(Color.White)
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Success",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 32.sp,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            layout(placeable.width, placeable.height) {
-                                placeable.place((constraints.maxWidth - placeable.width) / 2, 0)
-                            }
-                        })
-                }
-                navController.navigate("RequestsScreen")
-                viewModel.resetLoading()
-            } else {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(50.dp),
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun StoreNameDialog(

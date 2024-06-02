@@ -1,7 +1,6 @@
-package com.example.monsterfindrapp
+package com.example.monsterfindrapp.utility
 
 import com.example.monsterfindrapp.model.MonsterItem
-import com.google.android.gms.common.api.Scope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +36,18 @@ object MonsterRepository {
                     data?.get("desc") as? String ?: "",
                     data?.get("image") as? String ?: ""
                 )
+            }
+        }
+    }
+
+    fun getQueriedItems(query: String): Flow<List<MonsterItem>> {
+        return if (query.isEmpty()) {
+            _monsterItems.asStateFlow()
+        } else {
+            _monsterItems.asStateFlow().map { items ->
+                items.filter { item ->
+                    item.name.contains(query, ignoreCase = true)
+                }
             }
         }
     }

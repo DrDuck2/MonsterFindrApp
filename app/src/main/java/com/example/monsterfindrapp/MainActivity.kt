@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.monsterfindrapp.utility.PermissionLocationHandler
 import com.example.monsterfindrapp.view.AdminDashboardScreen
 import com.example.monsterfindrapp.view.HandleNotificationScreen
 import com.example.monsterfindrapp.view.ItemsScreen
@@ -18,6 +19,9 @@ import com.example.monsterfindrapp.view.RequestsScreen
 import com.example.monsterfindrapp.view.RequestsScreenDetails
 import com.example.monsterfindrapp.view.RequestsScreenRequests
 import com.example.monsterfindrapp.view.SelectLocationScreen
+import com.example.monsterfindrapp.view.StoreItemsScreen
+import com.example.monsterfindrapp.view.StoresScreen
+import com.example.monsterfindrapp.viewModel.StoreItemsViewModel
 import com.example.monsterfindrapp.view.UsersScreen
 import com.example.monsterfindrapp.viewModel.HandleNotificationViewModel
 import com.example.monsterfindrapp.viewModel.ItemsViewModel
@@ -34,6 +38,8 @@ class MainActivity : ComponentActivity() {
         val itemsViewModel = ViewModelProvider(this)[ItemsViewModel::class.java]
         val requestEntryViewModel = ViewModelProvider(this)[RequestEntryViewModel::class.java]
         val requestsViewModel = RequestsViewModel()
+        val permissionLocationHandler = PermissionLocationHandler(this, requestEntryViewModel)
+        val storeItemsviewModel = StoreItemsViewModel()
         setContent {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = "LoginRegisterScreen"){
@@ -47,9 +53,10 @@ class MainActivity : ComponentActivity() {
                     DisposableEffect(Unit) {
                         onDispose {
                             requestEntryViewModel.clearState()
+                            permissionLocationHandler.clearState()
                         }
                     }
-                    RequestEntryScreen(navController = navController, requestEntryViewModel)
+                    RequestEntryScreen(navController = navController, requestEntryViewModel, permissionLocationHandler)
                 }
                 composable("HandleNotificationScreen"){
                     HandleNotificationScreen(navController = navController, HandleNotificationViewModel())
@@ -67,13 +74,19 @@ class MainActivity : ComponentActivity() {
                     RequestsScreen(navController = navController, requestsViewModel)
                 }
                 composable("SelectLocationScreen"){
-                    SelectLocationScreen(navController = navController, requestEntryViewModel)
+                    SelectLocationScreen(navController = navController, permissionLocationHandler)
                 }
                 composable("RequestsScreenRequests"){
                     RequestsScreenRequests(navController = navController, requestsViewModel)
                 }
                 composable("RequestsScreenDetails"){
                     RequestsScreenDetails(navController = navController, requestsViewModel)
+                }
+                composable("StoresScreen"){
+                    StoresScreen(navController = navController, storeItemsviewModel)
+                }
+                composable("StoreItemsScreen"){
+                    StoreItemsScreen(navController = navController, storeItemsviewModel)
                 }
             }
         }

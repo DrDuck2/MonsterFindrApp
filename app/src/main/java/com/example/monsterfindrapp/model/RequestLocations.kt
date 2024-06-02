@@ -10,5 +10,5 @@ data class RequestLocations (
     val item: String,
     val price: Double,
     val imageProof: String,
-    val created_at: Date
+    val createdAt: Date
 )

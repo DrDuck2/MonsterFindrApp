@@ -1,4 +1,4 @@
-package com.example.monsterfindrapp
+package com.example.monsterfindrapp.utility
 
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase

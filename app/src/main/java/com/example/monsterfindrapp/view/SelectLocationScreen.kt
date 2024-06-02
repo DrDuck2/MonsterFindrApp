@@ -7,8 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import com.example.monsterfindrapp.utility.MapLocationsRepository
+import com.example.monsterfindrapp.utility.PermissionLocationHandler
 import com.example.monsterfindrapp.R
-import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -22,9 +23,9 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
-fun SelectLocationScreen(navController: NavController, viewModel: RequestEntryViewModel){
+fun SelectLocationScreen(navController: NavController, permissionLocationHandler: PermissionLocationHandler){
 
-    val locations by viewModel.locations.collectAsState()
+    val locations by MapLocationsRepository.locations.collectAsState()
 
     val context = LocalContext.current
     val cameraPositionState = rememberCameraPositionState{
@@ -47,7 +48,7 @@ fun SelectLocationScreen(navController: NavController, viewModel: RequestEntryVi
                 title = storeLocation.name,
                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED),
                 onClick = {
-                    viewModel.selectStoreLocation(storeLocation)
+                    permissionLocationHandler.selectStoreLocation(storeLocation)
                     navController.popBackStack()
                     true
                 }

@@ -1,9 +1,10 @@
-package com.example.monsterfindrapp
+package com.example.monsterfindrapp.utility
 
 import com.example.monsterfindrapp.model.Locations
 import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.StoreItem
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,28 @@ object MapLocationsRepository {
         CoroutineScope(Dispatchers.IO).launch {
             getLocations().collect{ locations ->
                 _locations.value = locations
+            }
+        }
+    }
+
+    fun getGeoPoints(): Flow<List<GeoPoint>> {
+        return _locations.map{ list ->
+            list.map {it.location}
+        }
+    }
+
+    fun getStoreLocations(): Flow<List<Locations>>{
+        return _locations.asStateFlow()
+    }
+
+    fun getFilteredLocations(query: String): Flow<List<Locations>> {
+        return if(query.isEmpty()){
+            _locations.asStateFlow()
+        }else{
+            _locations.asStateFlow().map { locations ->
+                locations.filter {location ->
+                    location.items.any {it.monsterItem.name.contains(query, ignoreCase = true)}
+                }
             }
         }
     }
@@ -74,4 +97,5 @@ object MapLocationsRepository {
             imageUrl = imageUrl
         )
     }
+
 }

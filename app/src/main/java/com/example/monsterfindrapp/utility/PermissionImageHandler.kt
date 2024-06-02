@@ -1,4 +1,4 @@
-package com.example.monsterfindrapp
+package com.example.monsterfindrapp.utility
 
 import android.app.Activity
 import android.content.Context
@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
 
 class PermissionImageHandler(
     private val context: Context,
@@ -53,17 +52,17 @@ class PermissionImageHandler(
         _selectedImageUri.value = null
     }
 
-    companion object{
+    companion object {
         @Composable
-        private fun rememberPermissionLauncher(
-            requestEntryViewModel: RequestEntryViewModel,
+        fun rememberPermissionLauncher(
+            permissionImageHandler: PermissionImageHandler,
             context: Context
         ): ActivityResultLauncher<String> {
             return rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
             ) { isGranted ->
                 if (isGranted) {
-                    requestEntryViewModel.launchImagePicker()
+                    permissionImageHandler.launchImagePicker()
                 } else {
                     // Handle permission denial
                 }
@@ -71,15 +70,15 @@ class PermissionImageHandler(
         }
 
         @Composable
-        private fun rememberPickImageLauncher(
-            requestEntryViewModel: RequestEntryViewModel
+        fun rememberPickImageLauncher(
+            permissionImageHandler: PermissionImageHandler
         ): ActivityResultLauncher<Intent> {
             return rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
                     result.data?.data?.let { uri ->
-                        requestEntryViewModel.setImageUri(uri)
+                        permissionImageHandler.setImageUri(uri)
                     }
                 }
             }
