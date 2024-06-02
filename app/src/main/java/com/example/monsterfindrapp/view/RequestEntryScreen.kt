@@ -37,6 +37,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
@@ -76,6 +77,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     var price by remember { mutableStateOf("") }
     val selectedImageUri by viewModel.selectedImageUri.observeAsState()
 
+
     // Expanding Certain DropDownMenus
     var expandAvailability by remember { mutableStateOf(false) }
     var expandDrinkType by remember { mutableStateOf(false) }
@@ -83,6 +85,10 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     var isError by remember { mutableStateOf(false) }
 
     val isLoading by viewModel.isLoading.collectAsState()
+
+    val isLocationLoading by viewModel.isLocationLoading.collectAsState()
+    val isLocationSuccess by viewModel.isLocationSuccess.collectAsState()
+    val errorLocationMessage by viewModel.errorLocationMessage.collectAsState()
 
     // Fetching Drink Types from the Database
     val drinkTypes by viewModel.monsterItems.collectAsState()
@@ -100,7 +106,6 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     LaunchedEffect(Unit) {
         viewModel.initializeLaunchers(pickImageLauncher)
     }
-
 
     if (isLoading) {
         LoadingOverlay(viewModel,navController)
@@ -143,26 +148,53 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                     )
                 }
                 Spacer(modifier = Modifier.width(50.dp))
-                Button(
-                    onClick = {
-                        viewModel.checkAndRequestLocationPermission(
-                            context,
-                            locationPermissionLauncher
-                        )
-                    },
-                    modifier = Modifier
-                        .size(100.dp, 50.dp)
-                        .clip(RoundedCornerShape(16.dp)),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = Color.Gray,
-                        contentColor = Color.White
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.MyLocation,
-                        contentDescription = "Current Location",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Button(
+                        onClick = {
+                            viewModel.checkAndRequestLocationPermission(
+                                context,
+                                locationPermissionLauncher
+                            )
+                        },
+                        modifier = Modifier
+                            .size(100.dp, 50.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color.Gray,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MyLocation,
+                            contentDescription = "Current Location",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (isLocationLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(30.dp),
+                            color = Color.Black
+                        )
+                    }
+                    if (isLocationSuccess) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Current Location",
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Green
+                        )
+                    }
+                    if (errorLocationMessage != null) {
+                        Text(
+                            text = "Error: $errorLocationMessage",
+                            fontSize = 16.sp,
+                            color = Color.Red
+                        )
+                    }
                 }
             }
         }

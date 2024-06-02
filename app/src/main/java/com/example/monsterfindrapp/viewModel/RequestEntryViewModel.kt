@@ -20,7 +20,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.monsterfindrapp.AuthenticationManager
+import com.example.monsterfindrapp.MapLocationsRepository
+import com.example.monsterfindrapp.MonsterRepository
 import com.example.monsterfindrapp.PermissionHandler
+import com.example.monsterfindrapp.PermissionImageHandler
 import com.example.monsterfindrapp.model.Locations
 import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.StoreItem
@@ -33,7 +36,6 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
-import com.google.type.Date
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,11 +46,60 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class RequestEntryViewModel(application: Application) : AndroidViewModel(application) {
-    private val _monsterItems = MutableStateFlow<List<MonsterItem>>(emptyList())
-    val monsterItems: StateFlow<List<MonsterItem>> = _monsterItems.asStateFlow()
+
+    private val permissionImageHandler = PermissionImageHandler(application, this)
+    //Monster Repository For All Monster Items
+    val monsterItems: StateFlow<List<MonsterItem>> = MonsterRepository.monsterItems
+    val locations: StateFlow<List<Locations>> = MapLocationsRepository.locations
+
 
     private val _location = MutableStateFlow<Location?>(null)
     val location: StateFlow<Location?> = _location.asStateFlow()
+
+    // Multiple Instances For Loading Inside the Code -> Maybe Utility
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _isSuccess = MutableStateFlow(false)
+    val isSuccess: StateFlow<Boolean> = _isSuccess
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+    /////////////////////////
+
+    private val _isLocationLoading = MutableStateFlow(false)
+    val isLocationLoading: StateFlow<Boolean> = _isLocationLoading
+
+    private val _isLocationSuccess = MutableStateFlow(false)
+    val isLocationSuccess: StateFlow<Boolean> = _isLocationSuccess
+
+    private val _errorLocationMessage = MutableStateFlow<String?>(null)
+    val errorLocationMessage: StateFlow<String?> = _errorMessage
+
+
+
+    private val _selectedImageUri = MutableLiveData<Uri?>()
+    val selectedImageUri: LiveData<Uri?> = _selectedImageUri
+
+    private val _locationText = MutableStateFlow("")
+    val locationText: StateFlow<String> = _locationText.asStateFlow()
+
+    //////////////////////////////
+    private val _selectedLocation = MutableStateFlow<Locations?>(null)
+    val selectedLocation: StateFlow<Locations?> = _selectedLocation
+
+    private val _selectedDrink = MutableStateFlow<MonsterItem?>(null)
+    val selectedDrink: StateFlow<MonsterItem?> = _selectedDrink
+
+    fun clearState(){
+        _location.value = null
+        _selectedImageUri.value = null
+        _locationText.value = ""
+        _selectedLocation.value = null
+        _selectedDrink.value = null
+        _isLocationSuccess.value = false
+    }
+
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<Intent>
 
@@ -56,28 +107,6 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
         this.pickImageLauncher = pickImageLauncher
     }
 
-    init {
-        viewModelScope.launch {
-            getMonsterItems().collect { items ->
-                _monsterItems.value = items
-            }
-        }
-    }
-
-    private fun getMonsterItems(): Flow<List<MonsterItem>> {
-        val db = FirebaseFirestore.getInstance()
-        return db.collection("MonsterItems").snapshots().map { snapshot ->
-            snapshot.documents.map { document ->
-                val data = document.data
-                MonsterItem(
-                    document.id,
-                    data?.get("name") as? String ?: "",
-                    data?.get("desc") as? String ?: "",
-                    data?.get("image") as? String ?: ""
-                )
-            }
-        }
-    }
 
     fun checkAndRequestPermissionImages(
         context: Context,
@@ -90,22 +119,12 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+
     fun launchImagePicker() {
         val intent = Intent(Intent.ACTION_PICK).apply {
             type = "image/*"
         }
         pickImageLauncher.launch(intent)
-    }
-
-    private val _selectedImageUri = MutableLiveData<Uri?>()
-    val selectedImageUri: LiveData<Uri?> = _selectedImageUri
-
-    fun setImageUri(uri: Uri) {
-        _selectedImageUri.value = uri
-    }
-
-    fun removeImageUri(){
-        _selectedImageUri.value = null
     }
 
     fun checkAndRequestLocationPermission(
@@ -120,6 +139,9 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun getCurrentLocation(context: Context) {
+        _isLocationLoading.value = true
+        _isLocationSuccess.value = false
+        _errorLocationMessage.value = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
                     PermissionChecker.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
@@ -140,12 +162,18 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                     Priority.PRIORITY_HIGH_ACCURACY,
                     null
                 ).addOnSuccessListener { location ->
+                    _isLocationLoading.value = false
+                    _isLocationSuccess.value = true
                     _location.value = location
                     _selectedLocation.value = null
                     setLocationText("Current Location")
                     Log.i("Location", "${location.latitude} ${location.longitude}")
+                }.addOnFailureListener{ e ->
+                    Log.e("GetCurrentLocation", "Error Fetching Current Location: ${e.message}", e)
+                    _errorLocationMessage.value = e.message ?: "\"Error Fetching Current Location \""
                 }
             }else{
+                _isLocationLoading.value = false
                 val dialog = AlertDialog.Builder(context)
                     .setTitle("Location is disabled")
                     .setMessage("Please turn on location to use this feature.")
@@ -163,22 +191,17 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    private val _locationText = MutableStateFlow<String>("")
-    val locationText: StateFlow<String> = _locationText.asStateFlow()
+    fun setImageUri(uri: Uri) {
+        _selectedImageUri.value = uri
+    }
+
+    fun removeImageUri(){
+        _selectedImageUri.value = null
+    }
 
     fun setLocationText(text: String){
         _locationText.value = text
     }
-
-
-    private val _locations = MutableStateFlow<List<Locations>>(emptyList())
-    val locations: StateFlow<List<Locations>> = _locations.asStateFlow()
-
-    private val _selectedLocation = MutableStateFlow<Locations?>(null)
-    val selectedLocation: StateFlow<Locations?> = _selectedLocation
-
-    private val _selectedDrink = MutableStateFlow<MonsterItem?>(null)
-    val selectedDrink: StateFlow<MonsterItem?> = _selectedDrink
 
     fun selectDrink(drink: MonsterItem) {
         _selectedDrink.value = drink
@@ -188,67 +211,6 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
         _selectedLocation.value = storeLocation
         _location.value = null
     }
-
-    init {
-        viewModelScope.launch {
-            getLocations().collect { locations ->
-                _locations.value = locations
-            }
-        }
-    }
-    private fun getLocations(): Flow<List<Locations>> {
-        val db = FirebaseFirestore.getInstance()
-        return db.collection("Locations").snapshots().map { snapshot ->
-            snapshot.documents.map { document ->
-                val name = document.id
-                val location = document.getGeoPoint("coordinates")!!
-                val items = getItemsForLocation(db, name)
-                Locations(
-                    name = name,
-                    location = location,
-                    items = items
-                )
-            }
-        }
-    }
-    private suspend fun getItemsForLocation(db: FirebaseFirestore, locationName: String): List<StoreItem>{
-        val itemsSnapshot = db.collection("Locations").document(locationName).collection("Items").get().await()
-        return itemsSnapshot.documents.map {document->
-            val price = document.getDouble("price")!!
-            val availability = document.getString("availability")!!
-            val lastUpdated = document.getTimestamp("last_updated")!!.toDate()
-            val monsterItemId = document.id
-            val monsterItem = getMonsterItem(db, monsterItemId)
-            StoreItem(
-                price = price,
-                availability = availability,
-                lastUpdated = lastUpdated,
-                monsterItem = monsterItem
-            )
-        }
-    }
-    private suspend fun getMonsterItem(db: FirebaseFirestore, monsterItemId: String): MonsterItem {
-        val monsterItemSnapshot = db.collection("MonsterItems").document(monsterItemId).get().await()
-        val id = monsterItemSnapshot.id
-        val name = monsterItemSnapshot.getString("name")!!
-        val description = monsterItemSnapshot.getString("desc")!!
-        val imageUrl = monsterItemSnapshot.getString("image")!!
-        return MonsterItem(
-            id = id,
-            name = name,
-            description = description,
-            imageUrl = imageUrl
-        )
-    }
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
-
-    private val _isSuccess = MutableStateFlow(false)
-    val isSuccess: StateFlow<Boolean> = _isSuccess
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
 
     fun setLoading(value: Boolean){
         _isLoading.value = value
@@ -296,7 +258,6 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                     }
             }
     }
-
     fun submitEntryCurrentLocation(currentLocation: Location, item: MonsterItem, availability: String, price: String, proofImage: Uri){
         _isLoading.value = true
 
