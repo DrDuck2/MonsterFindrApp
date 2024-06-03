@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,7 @@ import com.example.monsterfindrapp.utility.MapLocationsRepository
 import com.example.monsterfindrapp.R
 import com.example.monsterfindrapp.model.Locations
 import com.example.monsterfindrapp.model.SideMenuItem
+import com.example.monsterfindrapp.model.StoreItem
 import com.example.monsterfindrapp.viewModel.MapViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -36,6 +38,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ScreenHeaderWithMap(
@@ -43,12 +46,14 @@ fun ScreenHeaderWithMap(
     viewModel: MapViewModel,
     menuItems: List<SideMenuItem>,
     isMapExpanded: Boolean,
-    onMarkerClick: (Locations) -> Unit,
+    onMarkerClick: (Locations, Flow<List<StoreItem>>) -> Unit,
     onMapClick: () -> Unit
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
+
     val locations by MapLocationsRepository.getFilteredLocations(searchQuery).collectAsState(initial = emptyList())
-    val selectedLocation by viewModel.selectedLocation
+    val locationItems = viewModel.locationItems.collectAsState().value.collectAsState(emptyList())
+
 
     val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -98,22 +103,22 @@ fun ScreenHeaderWithMap(
                         title = storeLocation.name,
                         icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED),
                         onClick = {
-                            onMarkerClick(storeLocation)
+                            onMarkerClick(storeLocation, storeLocation.items)
                             true
                         }
                     )
                 }
             }
-            if (!isMapExpanded && selectedLocation != null) {
+            if (!isMapExpanded && locationItems != emptyList<StoreItem>()) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(0.5f)
                         .padding(16.dp)
                 ) {
-                    items(selectedLocation!!.items) { item ->
-                        LocationCard(item)
-                    }
+                     items(locationItems.value) {item ->
+                         LocationCard(item!!)
+                     }
                 }
             }
         }

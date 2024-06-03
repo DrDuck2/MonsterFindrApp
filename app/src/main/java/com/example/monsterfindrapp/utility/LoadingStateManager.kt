@@ -42,9 +42,6 @@ object LoadingStateManager {
     fun isSuccess(): Boolean{
         return isSuccess.value
     }
-    fun errorMessage(): String?{
-        return errorMessage.value
-    }
 
     fun setIsLoading(value: Boolean) {
         _isLoading.value = value

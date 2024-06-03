@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
         val storeItemsViewModel = StoreItemsViewModel()
         setContent {
             val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = "StoresScreen"){
+            NavHost(navController = navController, startDestination = "LoginRegisterScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
                 }

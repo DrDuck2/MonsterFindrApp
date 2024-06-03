@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.monsterfindrapp.IHandleImages
 
 class PermissionImageHandler(
     private val context: Context,
@@ -18,9 +20,6 @@ class PermissionImageHandler(
 ) {
     private lateinit var pickImageLauncher: ActivityResultLauncher<Intent>
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
-
-    private val _selectedImageUri = MutableLiveData<Uri?>()
-    val selectedImageUri: LiveData<Uri?> = _selectedImageUri
 
     fun initializeLaunchers(
         pickImageLauncher: ActivityResultLauncher<Intent>,
@@ -45,13 +44,6 @@ class PermissionImageHandler(
         pickImageLauncher.launch(intent)
     }
 
-    fun setImageUri(uri: Uri){
-        _selectedImageUri.value = uri
-    }
-    fun removeImageUri(){
-        _selectedImageUri.value = null
-    }
-
     companion object {
         @Composable
         fun rememberPermissionLauncher(
@@ -64,21 +56,22 @@ class PermissionImageHandler(
                 if (isGranted) {
                     permissionImageHandler.launchImagePicker()
                 } else {
-                    // Handle permission denial
+                    Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         @Composable
         fun rememberPickImageLauncher(
-            permissionImageHandler: PermissionImageHandler
+            permissionImageHandler: PermissionImageHandler,
+            viewModel: IHandleImages
         ): ActivityResultLauncher<Intent> {
             return rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
                     result.data?.data?.let { uri ->
-                        permissionImageHandler.setImageUri(uri)
+                        viewModel.setImageUri(uri)
                     }
                 }
             }

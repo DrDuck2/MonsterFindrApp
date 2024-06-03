@@ -30,15 +30,10 @@ object PermissionHandler {
     }
 
     fun hasLocationPermission(context: Context): Boolean{
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
                     PermissionChecker.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_COARSE_LOCATION) ==
                     PermissionChecker.PERMISSION_GRANTED
-        }else{
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                    PermissionChecker.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(context,Manifest.permission.ACCESS_COARSE_LOCATION) ==
-                    PermissionChecker.PERMISSION_GRANTED
-        }
+
     }
 
     fun requestLocationPermission(
@@ -46,12 +41,18 @@ object PermissionHandler {
     ){
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Manifest.permission.ACCESS_FINE_LOCATION
-            Manifest.permission.ACCESS_COARSE_LOCATION
         } else {
-            Manifest.permission.ACCESS_FINE_LOCATION
             Manifest.permission.ACCESS_COARSE_LOCATION
         }
         requestPermissionLauncher.launch(permission)
+    }
+
+    fun hasCameraPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PermissionChecker.PERMISSION_GRANTED
+    }
+
+    fun requestCameraPermission( requestPermissionLauncher: ActivityResultLauncher<String>){
+        requestPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
 

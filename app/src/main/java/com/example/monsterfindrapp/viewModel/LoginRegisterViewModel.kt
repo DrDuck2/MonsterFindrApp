@@ -1,23 +1,21 @@
 package com.example.monsterfindrapp.viewModel
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.model.LoginState
 import com.example.monsterfindrapp.model.RegisterState
+import com.example.monsterfindrapp.model.User
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -46,6 +44,7 @@ class LoginRegisterViewModel : ViewModel() {
             try {
                 val auth = Firebase.auth
                 auth.createUserWithEmailAndPassword(email, password).await()
+
                 _registerState.value = RegisterState.Success
 
                 login(email,password)
@@ -53,6 +52,24 @@ class LoginRegisterViewModel : ViewModel() {
                 _registerState.value = RegisterState.Error(e.message ?: "Unknown Error")
             }
         }
+    }
+
+    private fun addUserToDatabase(email: String){
+        val db = FirebaseFirestore.getInstance()
+
+        val userId = AuthenticationManager.getCurrentUserId()
+        val userDoc = db.collection("Users").document(userId!!).get()
+        userDoc.addOnSuccessListener {  snapshot ->
+            if(!snapshot.exists()){
+                val user = hashMapOf(
+                    "email" to email,
+                    "isAdmin" to false,
+                    "isSuspended" to false
+                )
+                db.collection("Users").document(userId).set(user)
+            }
+        }
+        _loginState.value = LoginState.Success
     }
 
     fun login(email: String, password: String) {
@@ -76,7 +93,7 @@ class LoginRegisterViewModel : ViewModel() {
                 try {
                     val auth = Firebase.auth
                     auth.signInWithEmailAndPassword(email, password).await()
-                    _loginState.value = LoginState.Success
+                    addUserToDatabase(email)
                 } catch (e: Exception) {
                     _loginState.value = LoginState.Error(e.message ?: "Unknown Error")
                 }

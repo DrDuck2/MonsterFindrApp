@@ -5,6 +5,9 @@ import android.location.Location
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import com.example.monsterfindrapp.IHandleImages
 import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.model.Locations
@@ -18,11 +21,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
-class RequestEntryViewModel(application: Application) : AndroidViewModel(application) {
+class RequestEntryViewModel(application: Application) : AndroidViewModel(application), IHandleImages{
 
     private val _selectedDrink = MutableStateFlow<MonsterItem?>(null)
     val selectedDrink: StateFlow<MonsterItem?> = _selectedDrink
 
+
+    private val _selectedImageUri = MutableLiveData<Uri?>()
+    val selectedImageUri: LiveData<Uri?> = _selectedImageUri
+
+    override fun setImageUri(uri: Uri){
+        _selectedImageUri.value = uri
+    }
+    override fun removeImageUri(){
+        _selectedImageUri.value = null
+    }
     fun clearState(){
         _selectedDrink.value = null
     }
@@ -62,13 +75,13 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                                 LoadingStateManager.setIsSuccess(true)
                             }
                             .addOnFailureListener { e ->
-                                Log.i("RequestEntry", "Error submitting entry: $e")
+                                Log.e("RequestEntry", "Error submitting entry: $e")
                                 LoadingStateManager.setErrorMessage(e.message ?: "Error Submitting Entry")
                             }
                     }
                 }
                     .addOnFailureListener { e ->
-                        Log.i("RequestEntry", "Error uploading proof image: $e")
+                        Log.e("RequestEntry", "Error uploading proof image: $e")
                         LoadingStateManager.setErrorMessage(e.message ?: "Error Submitting Entry")
 
                     }
@@ -104,13 +117,13 @@ class RequestEntryViewModel(application: Application) : AndroidViewModel(applica
                                 LoadingStateManager.setIsSuccess(true)
                             }
                             .addOnFailureListener { e ->
-                                Log.w("RequestEntry", "Error submitting entry: $e")
+                                Log.e("RequestEntry", "Error submitting entry: $e")
                                 LoadingStateManager.setErrorMessage(e.message ?: "Error Submitting Entry")
                             }
                     }
                 }
                     .addOnFailureListener { e ->
-                        Log.w("RequestEntry", "Error uploading proof image: $e")
+                        Log.e("RequestEntry", "Error uploading proof image: $e")
                         LoadingStateManager.setErrorMessage(e.message ?: "Error Submitting Entry")
                     }
             }

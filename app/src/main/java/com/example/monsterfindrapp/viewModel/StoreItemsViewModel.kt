@@ -6,6 +6,7 @@ import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.model.Locations
 import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.StoreItem
+import com.example.monsterfindrapp.utility.MapLocationsRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
@@ -16,14 +17,16 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class StoreItemsViewModel: ViewModel() {
 
-    private val _selectedLocation = MutableStateFlow<Locations?>(null)
-    val selectedLocation: StateFlow<Locations?> = _selectedLocation.asStateFlow()
 
     private val _selectedDrink = MutableStateFlow<MonsterItem?>(null)
     val selectedDrink: StateFlow<MonsterItem?> = _selectedDrink
 
-    fun setSelectedLocation(location: Locations) {
-        _selectedLocation.value = location
+    private val _selectedLocation = MutableStateFlow<Locations?>(null)
+    val selectedLocation: StateFlow<Locations?> = _selectedLocation.asStateFlow()
+
+    fun selectLocation(selectedLocation: Locations) {
+        MapLocationsRepository.setLocationItems(selectedLocation.items)
+        _selectedLocation.value = selectedLocation
     }
 
     fun selectDrink(drink: MonsterItem) {

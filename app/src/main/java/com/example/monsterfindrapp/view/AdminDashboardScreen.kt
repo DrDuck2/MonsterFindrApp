@@ -6,8 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
 import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.model.SideMenuItem
-import com.example.monsterfindrapp.utility.AuthenticationManager.checkUserIsAdmin
-import com.example.monsterfindrapp.utility.AuthenticationManager.logout
 import com.example.monsterfindrapp.viewModel.MapViewModel
 
 @Composable
@@ -44,8 +42,8 @@ fun AdminDashboardScreen(navController: NavController, viewModel: MapViewModel) 
         viewModel = viewModel,
         menuItems = mapMenuItems,
         isMapExpanded = isMapExpanded,
-        onMarkerClick = {
-            viewModel.selectedLocation.value = it
+        onMarkerClick = { location, items ->
+            viewModel.selectLocation(location, items)
             viewModel.isMapExpanded.value = false
         },
         onMapClick = {

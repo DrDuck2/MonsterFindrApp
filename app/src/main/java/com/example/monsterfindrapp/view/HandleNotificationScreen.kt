@@ -68,7 +68,6 @@ fun HandleNotificationScreen(navController: NavController, viewModel: HandleNoti
     Column(modifier = Modifier
         .fillMaxSize()
     ) {
-        // Add a button for creating new notifications
         Box(modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp))
@@ -93,7 +92,6 @@ fun HandleNotificationScreen(navController: NavController, viewModel: HandleNoti
             }
         }
 
-        // Add a LazyColumn to display the notification cards
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize(),

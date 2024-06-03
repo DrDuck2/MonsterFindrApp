@@ -90,8 +90,7 @@ object RequestsRepository {
             email = data?.get("email") as? String ?: "",
             uid = userId,
             isAdmin = data?.get("isAdmin") as? Boolean ?: false,
-            isSuspended = data?.get("isSuspended") as? Boolean ?: false,
-            isBanned = data?.get("isBanned") as? Boolean ?: false
+            isSuspended = data?.get("isSuspended") as? Boolean ?: false
         )
     }
 }

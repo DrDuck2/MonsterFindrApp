@@ -1,6 +1,7 @@
 package com.example.monsterfindrapp.view
 
 import android.app.Activity
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
@@ -39,8 +40,8 @@ import com.example.monsterfindrapp.model.RegisterState
 fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterViewModel) {
     // If user is Admin Go to AdminDashboardScreen otherwise go to MapScreen
     if(AuthenticationManager.isUserAuthenticated()){
-        AuthenticationManager.checkUserIsAdmin { navController.navigate("AdminDashboardScreen") }
-        navController.navigate("MapScreen")
+        AuthenticationManager.checkUserIsAdmin { isAdmin ->
+            if(isAdmin) navController.navigate("AdminDashboardScreen") else navController.navigate("MapScreen")}
     // If user not logged in
     }else{
         // On Back press close the app
@@ -120,9 +121,12 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
                 AuthenticationManager.checkUserIsAdmin { isAdmin ->
                     if(isAdmin){
                         navController.navigate("AdminDashboardScreen")
+                        Log.d("Admin","Logged In user is admin")
                     }
                     else{
                         navController.navigate("MapScreen")
+                        Log.d("Admin","Logged In user is not admin")
+
                     }
                 }
             }

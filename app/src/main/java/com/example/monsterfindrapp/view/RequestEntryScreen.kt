@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AddLocationAlt
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.MyLocation
@@ -40,6 +41,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.utility.MonsterRepository
+import com.example.monsterfindrapp.utility.PermissionCameraHandler
 import com.example.monsterfindrapp.utility.PermissionImageHandler
 import com.example.monsterfindrapp.utility.PermissionLocationHandler
 import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
@@ -72,9 +74,8 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     // Image Selection Handling
     val context = LocalContext.current
     val permissionImageHandler = remember { PermissionImageHandler(context, viewModel) }
-    val pickImageLauncher = PermissionImageHandler.rememberPickImageLauncher(permissionImageHandler)
+    val pickImageLauncher = PermissionImageHandler.rememberPickImageLauncher(permissionImageHandler, viewModel)
     val imagePermissionLauncher = PermissionImageHandler.rememberPermissionLauncher(permissionImageHandler, context)
-    val selectedImageUri by permissionImageHandler.selectedImageUri.observeAsState()
     permissionImageHandler.initializeLaunchers(pickImageLauncher, imagePermissionLauncher)
 
     // Location Selection Handling
@@ -85,6 +86,14 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     selectedStoreLocation?.let { storeLocation ->
         permissionLocationHandler.setLocationText(storeLocation.name)
     }
+
+    // Camera Handling
+    val permissionCameraHandler = remember { PermissionCameraHandler(context, viewModel) }
+    val cameraPermissionLauncher = PermissionCameraHandler.rememberCameraPermissionLauncher(permissionCameraHandler,context)
+    val takePictureLauncher = PermissionCameraHandler.rememberTakePictureLauncher(permissionCameraHandler,viewModel)
+    permissionCameraHandler.initializeLaunchers(cameraPermissionLauncher,takePictureLauncher)
+
+    val selectedImageUri by viewModel.selectedImageUri.observeAsState()
 
 
 
@@ -305,28 +314,47 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                     modifier = Modifier.size(24.dp)
                 )
             }
-            if (selectedImageUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(model = selectedImageUri),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colors.surface)
+            Spacer(modifier = Modifier.width(16.dp))
+            Button(
+                onClick = {
+                    permissionCameraHandler.checkAndRequestPermissionCamera()
+                },
+                modifier = Modifier
+                    .size(100.dp, 50.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color.Gray,
+                    contentColor = Color.White
                 )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CameraAlt,
+                    contentDescription = "Take A Picture",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        if (selectedImageUri != null) {
+            Image(
+                painter = rememberAsyncImagePainter(model = selectedImageUri),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colors.surface)
+            )
 
-                IconButton(
-                    onClick = { permissionImageHandler.removeImageUri() },
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Clear,
-                        contentDescription = "Clear Image",
-                        tint = Color.Red
-                    )
-                }
+            IconButton(
+                onClick = { viewModel.removeImageUri() },
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Clear,
+                    contentDescription = "Clear Image",
+                    tint = Color.Red
+                )
             }
         }
         Spacer(modifier = Modifier.height(12.dp))

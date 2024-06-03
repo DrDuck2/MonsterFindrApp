@@ -1,7 +1,6 @@
 package com.example.monsterfindrapp.view
 
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -135,9 +134,9 @@ fun AddItemModal(onDismiss: () -> Unit,
     // Image Selection Handling
     val context = LocalContext.current
     val permissionImageHandler = remember { PermissionImageHandler(context, viewModel) }
-    val pickImageLauncher = PermissionImageHandler.rememberPickImageLauncher(permissionImageHandler)
+    val pickImageLauncher = PermissionImageHandler.rememberPickImageLauncher(permissionImageHandler,viewModel)
     val imagePermissionLauncher = PermissionImageHandler.rememberPermissionLauncher(permissionImageHandler, context)
-    val selectedImageUri by permissionImageHandler.selectedImageUri.observeAsState()
+    val selectedImageUri by viewModel.selectedImageUri.observeAsState()
     permissionImageHandler.initializeLaunchers(pickImageLauncher, imagePermissionLauncher)
 
     var itemName by remember { mutableStateOf("") }
@@ -201,7 +200,7 @@ fun AddItemModal(onDismiss: () -> Unit,
                         )
 
                         IconButton(
-                            onClick = { permissionImageHandler.removeImageUri() },
+                            onClick = { viewModel.removeImageUri() },
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)

@@ -89,12 +89,12 @@ class UsersViewModel : ViewModel() {
                         LoadingStateManager.setIsSuccess(true)
                     }
                     .addOnFailureListener{ e ->
-                        Log.w("SuspendUser", "Error adding user in Suspended Users Collection ${e.message})", e)
+                        Log.e("SuspendUser", "Error adding user in Suspended Users Collection ${e.message})", e)
                         LoadingStateManager.setErrorMessage(e.message ?: "\"Error Suspending User\"")
                     }
             }
             .addOnFailureListener{ e ->
-                Log.w("SuspendUser", "Error Updating User in Users Collection ${e.message})", e)
+                Log.e("SuspendUser", "Error Updating User in Users Collection ${e.message})", e)
                 LoadingStateManager.setErrorMessage(e.message ?: "\"Error Suspending User\"")
             }
     }
@@ -116,15 +116,33 @@ class UsersViewModel : ViewModel() {
                 removedUsersRef.set(removedUser)
                     .addOnSuccessListener {
                         Log.i("BanUser", "User Added To Banned Users Collection Successfully")
+
+                        val notificationsRef = db.collection("Notifications").document(user.uid)
+                        notificationsRef.delete()
+                            .addOnSuccessListener {
+                                val requestEntriesRef = db.collection("RequestEntries").document(user.uid)
+                                requestEntriesRef.delete()
+                                    .addOnSuccessListener {
+                                        Log.i("BanUser", "User Successfully Removed From Database")
+                                        LoadingStateManager.setIsSuccess(true)
+                                    }
+                                    .addOnFailureListener{ e->
+                                        Log.e("BanUser", "Error Removing User From RequestEntries ${e.message})", e)
+                                        LoadingStateManager.setErrorMessage(e.message ?: "\"Error Banning User\"")
+                                    }
+                            }.addOnFailureListener{e->
+                                Log.e("BanUser", "Error Removing User From Notifications ${e.message})", e)
+                                LoadingStateManager.setErrorMessage(e.message ?: "\"Error Banning User\"")
+                            }
                         LoadingStateManager.setIsSuccess(true)
                     }
                     .addOnFailureListener{ e->
-                        Log.w("BanUser", "Error adding user in Banned Users Collection ${e.message})", e)
+                        Log.e("BanUser", "Error adding user in Banned Users Collection ${e.message})", e)
                         LoadingStateManager.setErrorMessage(e.message ?: "\"Error Banning User\"")
                     }
             }
             .addOnFailureListener{ e ->
-                Log.w("BanUser", "Error Deleting User in Users Collection ${e.message})", e)
+                Log.e("BanUser", "Error Deleting User in Users Collection ${e.message})", e)
                 LoadingStateManager.setErrorMessage(e.message ?: "\"Error Banning User\"")
             }
     }
@@ -143,12 +161,12 @@ class UsersViewModel : ViewModel() {
                         LoadingStateManager.setIsSuccess(true)
                     }
                     .addOnFailureListener{ e->
-                        Log.w("UnSuspendUser", "Error Deleting User in Suspended Users Collection ${e.message})", e)
+                        Log.e("UnSuspendUser", "Error Deleting User in Suspended Users Collection ${e.message})", e)
                         LoadingStateManager.setErrorMessage( e.message ?: "\"Error Un Suspending User\"")
                     }
             }
             .addOnFailureListener{ e->
-                Log.w("UnSuspendUser", "Error Updating isSuspended User in Users Collection ${e.message})", e)
+                Log.e("UnSuspendUser", "Error Updating isSuspended User in Users Collection ${e.message})", e)
                 LoadingStateManager.setErrorMessage( e.message ?: "\"Error Un Suspending User\"")
             }
     }

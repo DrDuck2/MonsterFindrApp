@@ -35,7 +35,7 @@ object AuthenticationManager {
     }
 
     private suspend fun userIsAdmin(): Boolean{
-        if(isUserAuthenticated()){
+        if(!isUserAuthenticated()){
             return false
         }
         val uid = getCurrentUserId()
@@ -57,7 +57,7 @@ object AuthenticationManager {
         val auth = Firebase.auth
         auth.signOut()
         Log.i("Sign out", "User signed out")
-        return !AuthenticationManager.isUserAuthenticated()
+        return !isUserAuthenticated()
     }
 
     fun navigateOnLoginFault(navController: NavController){
@@ -68,7 +68,7 @@ object AuthenticationManager {
 
     fun navigateOnAdminFault(navController: NavController){
         checkUserIsAdmin { isAdmin ->
-            if (isAdmin) {
+            if (!isAdmin) {
                 logout()
                 navController.navigate("LoginRegisterScreen")
             }

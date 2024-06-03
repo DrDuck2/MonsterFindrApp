@@ -173,7 +173,7 @@ fun LoadingOverlay(
                         .background(Color.White)
                         .fillMaxWidth()
                 ) {
-                    androidx.compose.material3.Text(text = "Error: $errorMessage",
+                    Text(text = "Error: $errorMessage",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color.Red,
@@ -191,7 +191,7 @@ fun LoadingOverlay(
                         .background(Color.White)
                         .fillMaxWidth()
                 ) {
-                    androidx.compose.material3.Text(text = "Success",
+                    Text(text = "Success",
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp,
                         color = Color.Black,

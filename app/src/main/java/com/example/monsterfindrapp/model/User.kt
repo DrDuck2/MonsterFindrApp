@@ -5,5 +5,4 @@ data class User (
     val uid: String,
     val isAdmin: Boolean,
     val isSuspended: Boolean,
-    val isBanned: Boolean,
 )

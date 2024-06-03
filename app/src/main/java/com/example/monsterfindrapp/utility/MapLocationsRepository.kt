@@ -1,10 +1,11 @@
 package com.example.monsterfindrapp.utility
 
-import androidx.compose.runtime.collectAsState
+import android.util.Log
 import com.example.monsterfindrapp.model.Locations
+import com.example.monsterfindrapp.model.LoginState
 import com.example.monsterfindrapp.model.MonsterItem
 import com.example.monsterfindrapp.model.StoreItem
-import com.google.firebase.Timestamp
+import com.example.monsterfindrapp.view.SmallLoadingIconOverlay
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.snapshots
@@ -14,12 +15,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.Date
@@ -29,8 +27,9 @@ object MapLocationsRepository {
     private val _locations = MutableStateFlow<List<Locations>>(emptyList())
     val locations: StateFlow<List<Locations>> = _locations.asStateFlow()
 
-    private val _filteredLocations = MutableStateFlow<List<Locations>>(emptyList())
-    val filteredLocations: StateFlow<List<Locations>> = _filteredLocations.asStateFlow()
+    private val _locationItems = MutableStateFlow<Flow<List<StoreItem>>>(emptyFlow())
+    val locationItems: StateFlow<Flow<List<StoreItem>>> = _locationItems.asStateFlow()
+
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
@@ -40,15 +39,29 @@ object MapLocationsRepository {
         }
     }
 
+    fun setLocationItems(items: Flow<List<StoreItem>>){
+        _locationItems.value = items
+    }
+
     fun getGeoPoints(): Flow<List<GeoPoint>> {
         return _locations.map{ list ->
             list.map {it.location}
         }
     }
 
-    fun getStoreLocations(): Flow<List<Locations>>{
-        return _locations.asStateFlow()
+    fun getFilteredLocationItems(query: String): Flow<List<StoreItem>> {
+        return if (query.isEmpty()) {
+            _locationItems.value
+        } else {
+            _locationItems.value.map { list ->
+                list.filter { item ->
+                    item.monsterItem.name.contains(query, ignoreCase = true)
+                }
+            }
+        }
     }
+
+
     fun getFilteredStoreLocations(query: String): Flow<List<Locations>>{
         return if(query.isEmpty()){
             _locations.asStateFlow()
@@ -61,34 +74,24 @@ object MapLocationsRepository {
         }
     }
 
-
-//    fun getFilteredLocations(query: String): Flow<List<Locations>> {
-//        return if(query.isEmpty()){
-//            _locations.asStateFlow()
-//        }else{
-//            _locations.asStateFlow().map { locationsList ->
-//                locationsList.filter{ location ->
-//                    location.items.map{ storeItemList ->
-//                        storeItemList.any { storeItem ->
-//                            storeItem.monsterItem.name.contains(query, ignoreCase = true)
-//                        }
-//                    }.firstOrNull {it} ?: false
-//                }
-//            }
-//        }
-//    }
-
     fun getFilteredLocations(query: String): Flow<List<Locations>> {
-        return if(query.isEmpty()){
+        val list: Flow<List<Locations>> = if(query.isEmpty()){
             _locations.asStateFlow()
         }else{
+            LoadingStateManager.setSmallLoading(true)
             _locations.asStateFlow().map { locations ->
-                locations.filter {location ->
-                    location.items.any {it.monsterItem.name.contains(query, ignoreCase = true)}
+                locations.filter { location ->
+                    location.items.map { storeItems ->
+                        storeItems.any { storeItem ->
+                            storeItem.monsterItem.name.contains(query, ignoreCase = true)
+                        }
+                    }.firstOrNull() ?: false
                 }
             }
         }
+        return list
     }
+
 
     private fun getLocations(): Flow<List<Locations>> {
         val db = FirebaseFirestore.getInstance()
@@ -106,43 +109,26 @@ object MapLocationsRepository {
         }
     }
 
-//    private suspend fun getItemsForLocation(db: FirebaseFirestore, locationName: String): Flow<List<StoreItem>> {
-//        return db.collection("Locations").document(locationName).collection("Items").snapshots()
-//            .map { snapshot ->
-//                snapshot.documents.map { document ->
-//                    val data = document.data
-//                    val price = data?.get("price") as? Double ?: 0.0
-//                    val availability = data?.get("availability") as? String ?: ""
-//                    val lastUpdated = data?.get("last_updated") as? Date ?: Date()
-//                    val monsterItemId = document.id
-//                    val monsterItem = getMonsterItem(db, monsterItemId)
-//                    StoreItem(
-//                        price = price,
-//                        availability = availability,
-//                        lastUpdated = lastUpdated,
-//                        monsterItem = monsterItem
-//                    )
-//                }
-//            }
-//    }
-
-
-    private suspend fun getItemsForLocation(db: FirebaseFirestore, locationName: String): List<StoreItem>{
-        val itemsSnapshot = db.collection("Locations").document(locationName).collection("Items").get().await()
-        return itemsSnapshot.documents.map {document->
-            val price = document.getDouble("price")!!
-            val availability = document.getString("availability")!!
-            val lastUpdated = document.getTimestamp("last_updated")!!.toDate()
-            val monsterItemId = document.id
-            val monsterItem = getMonsterItem(db, monsterItemId)
-            StoreItem(
-                price = price,
-                availability = availability,
-                lastUpdated = lastUpdated,
-                monsterItem = monsterItem
-            )
-        }
+    private suspend fun getItemsForLocation(db: FirebaseFirestore, locationName: String): Flow<List<StoreItem>> {
+        return db.collection("Locations").document(locationName).collection("Items").snapshots()
+            .map { snapshot ->
+                snapshot.documents.map { document ->
+                    val data = document.data
+                    val price = data?.get("price") as? Double ?: 0.0
+                    val availability = data?.get("availability") as? String ?: ""
+                    val lastUpdated = data?.get("last_updated") as? Date ?: Date()
+                    val monsterItemId = document.id
+                    val monsterItem = getMonsterItem(db, monsterItemId)
+                    StoreItem(
+                        price = price,
+                        availability = availability,
+                        lastUpdated = lastUpdated,
+                        monsterItem = monsterItem
+                    )
+                }
+            }
     }
+
 
     private suspend fun getMonsterItem(db: FirebaseFirestore, monsterItemId: String): MonsterItem {
         val monsterItemSnapshot = db.collection("MonsterItems").document(monsterItemId).get().await()

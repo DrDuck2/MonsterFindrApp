@@ -62,8 +62,7 @@ fun StoresScreen(navController: NavController, viewModel: StoreItemsViewModel, p
 
     var showAddStoreModal by remember{ mutableStateOf(false) }
 
-    val locations by MapLocationsRepository.getFilteredStoreLocations(searchText)
-        .collectAsState(initial = emptyList())
+    val locations by MapLocationsRepository.getFilteredStoreLocations(searchText).collectAsState(initial = emptyList())
 
 
     if(isLoading){
@@ -119,7 +118,7 @@ fun StoresScreen(navController: NavController, viewModel: StoreItemsViewModel, p
             ) {
                 items(locations) { location ->
                     StoreCard(location,viewModel) { selectedLocation ->
-                        viewModel.setSelectedLocation(selectedLocation)
+                        viewModel.selectLocation(selectedLocation)
                         navController.navigate("StoreItemsScreen")
                     }
                 }
@@ -135,7 +134,6 @@ fun StoresScreen(navController: NavController, viewModel: StoreItemsViewModel, p
             },
             permissionLocationHandler,
             LocalContext.current,
-            viewModel
         )
     }
 }
@@ -146,8 +144,7 @@ fun AddStoreModal(
     onSubmit: (String, Double, Double) -> Unit,
     permissionLocationHandler:PermissionLocationHandler,
     context: Context,
-    viewModel: StoreItemsViewModel
-) {
+    ) {
 
     var storeName by remember { mutableStateOf("") }
     var storeLatitude by remember { mutableStateOf("") }

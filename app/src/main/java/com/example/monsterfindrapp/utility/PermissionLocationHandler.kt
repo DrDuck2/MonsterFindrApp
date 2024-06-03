@@ -9,6 +9,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -131,7 +132,7 @@ class PermissionLocationHandler (
                 if (isGranted) {
                     permissionLocationHandler.getCurrentLocation(context)
                 } else {
-                    // Handle permission denial
+                    Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
                 }
             }
         }

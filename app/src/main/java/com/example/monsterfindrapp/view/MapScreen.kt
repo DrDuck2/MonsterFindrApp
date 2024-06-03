@@ -36,8 +36,8 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
         viewModel = viewModel,
         menuItems = mapMenuItems,
         isMapExpanded = isMapExpanded,
-        onMarkerClick = {
-            viewModel.selectedLocation.value = it
+        onMarkerClick = { location, items ->
+            viewModel.selectLocation(location, items)
             viewModel.isMapExpanded.value = false
         },
         onMapClick = {

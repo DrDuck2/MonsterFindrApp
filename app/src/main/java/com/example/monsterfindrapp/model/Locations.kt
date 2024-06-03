@@ -6,6 +6,5 @@ import kotlinx.coroutines.flow.Flow
 data class Locations (
     val name: String,
     val location: GeoPoint,
-//    val items: Flow<List<StoreItem>>
-    val items: List<StoreItem>
+    val items: Flow<List<StoreItem>>
 )

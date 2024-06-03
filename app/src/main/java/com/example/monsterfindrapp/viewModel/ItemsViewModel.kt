@@ -4,13 +4,26 @@ import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import com.example.monsterfindrapp.IHandleImages
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.model.MonsterItem
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 
-class ItemsViewModel(application: Application): AndroidViewModel(application) {
+class ItemsViewModel(application: Application): AndroidViewModel(application), IHandleImages {
+
+    private val _selectedImageUri = MutableLiveData<Uri?>()
+    val selectedImageUri: LiveData<Uri?> = _selectedImageUri
+
+    override fun setImageUri(uri: Uri){
+        _selectedImageUri.value = uri
+    }
+    override fun removeImageUri(){
+        _selectedImageUri.value = null
+    }
 
     fun uploadImageAndSaveItem(itemName: String, itemDescription: String, imageUri: Uri){
         LoadingStateManager.setIsLoading(true)
@@ -76,6 +89,7 @@ class ItemsViewModel(application: Application): AndroidViewModel(application) {
                 LoadingStateManager.setErrorMessage(e.message ?: "\"Error Removing Image From Storage\"")
             }
     }
+
 
 }
 

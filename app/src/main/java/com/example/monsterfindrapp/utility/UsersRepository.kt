@@ -36,7 +36,6 @@ object UsersRepository {
                     document.id,
                     data?.get("isAdmin") as? Boolean ?: false,
                     data?.get("isSuspended") as? Boolean ?: false,
-                    data?.get("isBanned") as? Boolean ?: false,
                 )
             }
         }
