@@ -1,6 +1,7 @@
 package com.example.monsterfindrapp.view
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.utility.MonsterRepository
 import com.example.monsterfindrapp.utility.PermissionImageHandler
@@ -54,6 +56,9 @@ import com.example.monsterfindrapp.viewModel.ItemsViewModel
 
 @Composable
 fun ItemsScreen(navController: NavController, viewModel: ItemsViewModel) {
+    AuthenticationManager.navigateOnLoginFault(navController)
+    AuthenticationManager.navigateOnAdminFault(navController)
+
     var searchText by remember { mutableStateOf("") }
 
     val monsterItems by MonsterRepository.getQueriedItems(searchText).collectAsState(initial = emptyList())
@@ -232,7 +237,7 @@ fun AddItemModal(onDismiss: () -> Unit,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.AddCircle,
-                        contentDescription = "Select Image",
+                        contentDescription = "Submit Entry",
                         modifier = Modifier.size(24.dp)
                     )
                 }

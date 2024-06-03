@@ -11,25 +11,23 @@ import com.example.monsterfindrapp.viewModel.MapViewModel
 
 @Composable
 fun MapScreen(navController: NavController, viewModel: MapViewModel) {
+
     val isMapExpanded by viewModel.isMapExpanded
 
-    if(!AuthenticationManager.isUserAuthenticated()) {
-        navController.navigate("LoginRegisterScreen")
-    }else{
-        BackHandler {
-            if(!isMapExpanded){
-                viewModel.isMapExpanded.value = true
-            }else{
-                viewModel.logout()
-                navController.navigate("LoginRegisterScreen")
-            }
+    AuthenticationManager.navigateOnLoginFault(navController)
+    BackHandler {
+        if (!isMapExpanded) {
+            viewModel.isMapExpanded.value = true
+        } else {
+            AuthenticationManager.logout()
+            navController.navigate("LoginRegisterScreen")
         }
     }
     val mapMenuItems = listOf(
         SideMenuItem("Set Notification") { navController.navigate("HandleNotificationScreen") },
         SideMenuItem("Request Entry") { navController.navigate("RequestEntryScreen") },
         SideMenuItem("Logout") {
-            if (viewModel.logout()) navController.navigate("LoginRegisterScreen")
+            if (AuthenticationManager.logout()) navController.navigate("LoginRegisterScreen")
         }
     )
 

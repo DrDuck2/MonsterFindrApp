@@ -1,5 +1,6 @@
 package com.example.monsterfindrapp.viewModel
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,7 +17,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class LoginRegisterViewModel : ViewModel() {
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
@@ -55,39 +58,67 @@ class LoginRegisterViewModel : ViewModel() {
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _loginState.value = LoginState.Loading
-            try {
-                val auth = Firebase.auth
-                auth.signInWithEmailAndPassword(email, password).await()
-                _loginState.value = LoginState.Success
-            } catch (e: Exception) {
-                _loginState.value = LoginState.Error(e.message ?: "Unknown Error")
-            }
-        }
-    }
 
-    fun checkUserIsAdmin(callback: (Boolean) -> Unit){
-        CoroutineScope(Dispatchers.Main).launch {
-            val isAdmin = userIsAdmin()
-            callback(isAdmin)
-        }
-    }
+            var isSuspended: Boolean? = null
+            var isBanned = false
 
-    private suspend fun userIsAdmin(): Boolean{
-        if(!AuthenticationManager.isUserAuthenticated()){
-            return false
-        }
-        val uid = AuthenticationManager.getCurrentUserId()
-        val db = FirebaseFirestore.getInstance()
-        return try{
-            val userDocument = uid?.let { db.collection("Users").document(it).get().await() }
-            if(userDocument?.exists() == true){
-                userDocument.getBoolean("isAdmin") ?: false
+            checkUserSuspended(email, callback = { result ->
+               isSuspended = result
+            })
+            checkUserBanned(email, callback = { result ->
+                isBanned = result
+            })
+            if(isBanned){
+                _loginState.value = LoginState.Error(message = "User Is Banned")
+            }else if(isSuspended == true){
+                _loginState.value = LoginState.Error(message = "User Is Suspended")
             }else{
-                false
+                try {
+                    val auth = Firebase.auth
+                    auth.signInWithEmailAndPassword(email, password).await()
+                    _loginState.value = LoginState.Success
+                } catch (e: Exception) {
+                    _loginState.value = LoginState.Error(e.message ?: "Unknown Error")
+                }
             }
-        }catch (e: Exception){
-            e.printStackTrace()
-            false
         }
     }
+
+    private fun checkUserSuspended(email: String, callback: (Boolean?) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        viewModelScope.launch {
+            val isSuspended = withContext(Dispatchers.IO) {
+                try {
+                    val querySnapshot = db.collection("Users").whereEqualTo("email", email).get().await()
+                    if (querySnapshot.documents.isNotEmpty()) {
+                        val userDoc = querySnapshot.documents[0]
+                        userDoc.getBoolean("isSuspended")
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            }
+            callback(isSuspended)
+        }
+    }
+
+    private fun checkUserBanned(email: String, callback: (Boolean) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        viewModelScope.launch {
+            val isBanned = withContext(Dispatchers.IO) {
+                try {
+                    val querySnapshot = db.collection("BannedUsers").whereEqualTo("email", email).get().await()
+                    querySnapshot.documents.isNotEmpty()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    false
+                }
+            }
+            callback(isBanned)
+        }
+    }
+
 }

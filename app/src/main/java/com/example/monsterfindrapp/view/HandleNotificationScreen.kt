@@ -1,5 +1,6 @@
 package com.example.monsterfindrapp.view
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,17 +33,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.viewModel.HandleNotificationViewModel
 
 @Composable
 fun HandleNotificationScreen(navController: NavController, viewModel: HandleNotificationViewModel){
 
+    AuthenticationManager.navigateOnLoginFault(navController)
+    AuthenticationManager.navigateOnAdminFault(navController)
+
     val userNotifications = viewModel.userNotifications.collectAsState()
 
     val isLoading by LoadingStateManager.isLoading.collectAsState()
 
     var showNotification by remember { mutableStateOf(false) }
+
+    BackHandler {
+        if(showNotification){
+            showNotification = false
+        }else{
+            navController.navigate("AdminDashboardScreen")
+        }
+    }
 
     if(isLoading){
         LoadingOverlay(

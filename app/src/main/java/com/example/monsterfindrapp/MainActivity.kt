@@ -39,10 +39,10 @@ class MainActivity : ComponentActivity() {
         val requestEntryViewModel = ViewModelProvider(this)[RequestEntryViewModel::class.java]
         val requestsViewModel = RequestsViewModel()
         val permissionLocationHandler = PermissionLocationHandler(this, requestEntryViewModel)
-        val storeItemsviewModel = StoreItemsViewModel()
+        val storeItemsViewModel = StoreItemsViewModel()
         setContent {
             val navController = rememberNavController()
-            NavHost(navController = navController, startDestination = "LoginRegisterScreen"){
+            NavHost(navController = navController, startDestination = "StoresScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())
                 }
@@ -83,10 +83,10 @@ class MainActivity : ComponentActivity() {
                     RequestsScreenDetails(navController = navController, requestsViewModel)
                 }
                 composable("StoresScreen"){
-                    StoresScreen(navController = navController, storeItemsviewModel)
+                    StoresScreen(navController = navController, storeItemsViewModel, permissionLocationHandler)
                 }
                 composable("StoreItemsScreen"){
-                    StoreItemsScreen(navController = navController, storeItemsviewModel)
+                    StoreItemsScreen(navController = navController, storeItemsViewModel)
                 }
             }
         }

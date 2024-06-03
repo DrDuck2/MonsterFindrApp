@@ -18,6 +18,8 @@ object LoadingStateManager {
     val smallLoading: StateFlow<Boolean> = _smallLoading
     private val _smallSuccess = MutableStateFlow(false)
     val smallSuccess: StateFlow<Boolean> = _smallSuccess
+    private val _smallFailure = MutableStateFlow(false)
+    val smallFailure: StateFlow<Boolean> = _smallFailure
     private val _smallErrorMessage = MutableStateFlow<String?>(null)
     val smallErrorMessage: StateFlow<String?> = _smallErrorMessage
 
@@ -29,6 +31,9 @@ object LoadingStateManager {
     }
     fun setSmallErrorMessage(value: String?){
         _smallErrorMessage.value = value
+    }
+    fun setSmallFailure(value: Boolean){
+        _smallFailure.value = value
     }
 
     fun isLoading(): Boolean{
@@ -60,5 +65,6 @@ object LoadingStateManager {
         _smallLoading.value = false
         _smallSuccess.value = false
         _smallErrorMessage.value = null
+        _smallFailure.value = false
     }
 }

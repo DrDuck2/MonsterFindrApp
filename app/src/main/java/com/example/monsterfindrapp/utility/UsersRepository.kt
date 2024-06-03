@@ -83,7 +83,7 @@ object UsersRepository {
         return users.sortedWith(
             compareByDescending<User> { it.uid == currentUserId }
                 .thenByDescending { it.isAdmin }
-                .thenByDescending { it.isSuspended }
+                .thenByDescending { !it.isSuspended }
                 .thenBy { it.email }
         )
     }

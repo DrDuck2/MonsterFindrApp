@@ -37,14 +37,14 @@ import com.example.monsterfindrapp.model.RegisterState
 
 @Composable
 fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterViewModel) {
-    val activity = (LocalContext.current as? Activity)
+    // If user is Admin Go to AdminDashboardScreen otherwise go to MapScreen
     if(AuthenticationManager.isUserAuthenticated()){
-        viewModel.checkUserIsAdmin { navController.navigate("AdminDashboardScreen") }
+        AuthenticationManager.checkUserIsAdmin { navController.navigate("AdminDashboardScreen") }
         navController.navigate("MapScreen")
-
     // If user not logged in
     }else{
         // On Back press close the app
+        val activity = (LocalContext.current as? Activity)
         BackHandler {
             activity?.finish()
         }
@@ -117,7 +117,7 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
                 Text("Error: ${(loginState as LoginState.Error).message}")
             }
             is LoginState.Success ->{
-                viewModel.checkUserIsAdmin { isAdmin ->
+                AuthenticationManager.checkUserIsAdmin { isAdmin ->
                     if(isAdmin){
                         navController.navigate("AdminDashboardScreen")
                     }

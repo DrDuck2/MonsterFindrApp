@@ -12,6 +12,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -33,7 +34,9 @@ fun SmallLoadingIconOverlay(
 ){
     val isLoading by LoadingStateManager.smallLoading.collectAsState()
     val isSuccess by LoadingStateManager.smallSuccess.collectAsState()
+    val isFailure by LoadingStateManager.smallFailure.collectAsState()
     val errorMessage by LoadingStateManager.smallErrorMessage.collectAsState()
+
 
 
     if (isLoading) {
@@ -48,6 +51,13 @@ fun SmallLoadingIconOverlay(
             contentDescription = "Current Location",
             modifier = Modifier.size(24.dp),
             tint = Color.Green
+        )
+    }else if(isFailure){
+        Icon(
+            imageVector = Icons.Filled.Clear,
+            contentDescription = "Failed Loading Current Location",
+            modifier = Modifier.size(24.dp),
+            tint = Color.Red
         )
     }
     if (errorMessage != null) {

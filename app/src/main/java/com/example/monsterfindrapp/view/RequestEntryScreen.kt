@@ -50,9 +50,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
     // UI VALUES
 
     // If user is not authenticated redirect to Login Screen
-    if(!AuthenticationManager.isUserAuthenticated()) {
-        navController.navigate("LoginRegisterScreen")
-    }
+    AuthenticationManager.navigateOnLoginFault(navController)
     // Fetching Drink Types from the Database
     val drinkTypes by MonsterRepository.monsterItems.collectAsState()
 

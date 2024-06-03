@@ -21,12 +21,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.utility.UsersRepository
 import com.example.monsterfindrapp.viewModel.UsersViewModel
 
 @Composable
 fun UsersScreen(navController: NavController, viewModel: UsersViewModel) {
+    AuthenticationManager.navigateOnLoginFault(navController)
+    AuthenticationManager.navigateOnAdminFault(navController)
+
     var searchText by remember { mutableStateOf("") }
 
     var expanded by remember { mutableStateOf(false) }

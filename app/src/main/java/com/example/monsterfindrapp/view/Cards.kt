@@ -57,6 +57,8 @@ import com.example.monsterfindrapp.viewModel.HandleNotificationViewModel
 import com.example.monsterfindrapp.viewModel.ItemsViewModel
 import com.example.monsterfindrapp.viewModel.StoreItemsViewModel
 import com.example.monsterfindrapp.viewModel.UsersViewModel
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -64,6 +66,12 @@ import java.util.Locale
 @Composable
 fun StoreCard(location: Locations,viewModel: StoreItemsViewModel, onClick: (Locations) -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
+
+    val latitude = location.location.latitude
+    val roundedLatitude = BigDecimal(latitude).setScale(4, RoundingMode.HALF_UP).toDouble()
+    val longitude =  location.location.longitude
+    val roundedLongitude= BigDecimal(longitude).setScale(4, RoundingMode.HALF_UP).toDouble()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -89,12 +97,12 @@ fun StoreCard(location: Locations,viewModel: StoreItemsViewModel, onClick: (Loca
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Latitude: ${location.location.latitude}",
+                    text = "Latitude: $roundedLatitude",
                     style = MaterialTheme.typography.body2
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Longitude: ${location.location.longitude}",
+                    text = "Longitude: $roundedLongitude",
                     style = MaterialTheme.typography.body2
                 )
             }
@@ -600,14 +608,12 @@ fun RequestsCard(request: RequestLocations, onCardClick: () -> Unit) {
 
 @Composable
 fun UserCard(user: User, viewModel: UsersViewModel) {
-    val suspendDate by viewModel.suspendDate.collectAsState()
+
+    val suspendDate by viewModel.getSuspendDate(user).collectAsState()
 
     var userWork by remember{ mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(user) {
-        viewModel.callGetSuspendDate(user)
-    }
 
     androidx.compose.material.Card(
         modifier = Modifier
@@ -632,7 +638,7 @@ fun UserCard(user: User, viewModel: UsersViewModel) {
                     fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material.Text(text = "Uid: " + user.uid, fontSize = 8.sp)
+                Text(text = "Uid: " + user.uid, fontSize = 8.sp)
                 Spacer(modifier = Modifier.height(16.dp))
                 if (user.isSuspended) {
                     androidx.compose.material.Text(

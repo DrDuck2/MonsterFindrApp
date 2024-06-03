@@ -1,5 +1,6 @@
 package com.example.monsterfindrapp.view
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,12 +20,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
 
 @Composable
 fun RequestsScreenRequests(navController: NavController, viewModel: RequestsViewModel) {
 
+    AuthenticationManager.navigateOnLoginFault(navController)
+    AuthenticationManager.navigateOnAdminFault(navController)
+
+
     val userInfo = viewModel.usersRequests.collectAsState().value.collectAsState(emptyList())
+
+    BackHandler {
+        navController.navigate("RequestsScreen")
+    }
 
     Scaffold(
         topBar = {

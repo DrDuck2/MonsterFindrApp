@@ -1,5 +1,6 @@
 package com.example.monsterfindrapp.view
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,6 +54,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.utility.MapLocationsRepository
 import com.example.monsterfindrapp.R
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -71,6 +73,9 @@ import java.math.RoundingMode
 @Composable
 fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewModel) {
 
+    AuthenticationManager.navigateOnLoginFault(navController)
+    AuthenticationManager.navigateOnAdminFault(navController)
+
     val selectedRequest = viewModel.selectedRequest.collectAsState()
     val user = viewModel.user.collectAsState()
 
@@ -86,10 +91,11 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
 
     val isLoading by LoadingStateManager.isLoading.collectAsState()
 
+
     if(isLoading){
         NavigateLoadingOverlay(
             onNavigate = {
-                navController.navigate("RequestsScreen")
+                navController.navigate("RequestsScreenRequests")
             },
             setAlpha = 1f
         )

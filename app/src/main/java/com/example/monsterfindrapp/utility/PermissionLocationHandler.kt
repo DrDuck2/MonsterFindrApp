@@ -66,6 +66,7 @@ class PermissionLocationHandler (
     fun getCurrentLocation(context: Context) {
         LoadingStateManager.resetLoading()
         LoadingStateManager.setSmallLoading(true)
+        LoadingStateManager.setSmallFailure(false)
         LoadingStateManager.setSmallSuccess(false)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -89,7 +90,11 @@ class PermissionLocationHandler (
                     _location.value = location
                     _selectedLocation.value = null
                     setLocationText("Current Location")
-                    Log.i("Location", "${location.latitude} ${location.longitude}")
+                    if(location == null){
+                        LoadingStateManager.setSmallFailure(true)
+                    }else{
+                        Log.i("Location", "${location.latitude} ${location.longitude}")
+                    }
                 }.addOnFailureListener{ e ->
                     Log.e("GetCurrentLocation", "Error Fetching Current Location: ${e.message}", e)
                     LoadingStateManager.setSmallErrorMessage( e.message ?: "\"Error Fetching Current Location \"")

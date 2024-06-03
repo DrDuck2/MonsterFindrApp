@@ -24,11 +24,4 @@ class MapViewModel : ViewModel() {
         _searchQuery.value = query
     }
 
-    fun logout(): Boolean{
-        val auth = Firebase.auth
-        auth.signOut()
-        Log.i("Sign out", "User signed out")
-        return !AuthenticationManager.isUserAuthenticated()
-    }
-
 }

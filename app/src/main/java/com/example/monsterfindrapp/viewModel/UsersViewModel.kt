@@ -6,20 +6,20 @@ import androidx.lifecycle.viewModelScope
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.model.User
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.Date
 
 class UsersViewModel : ViewModel() {
 
-    private val _suspendDate = MutableStateFlow<Date?>(null)
-    val suspendDate: StateFlow<Date?> = _suspendDate.asStateFlow()
-
+    private val suspendDateMap = mutableMapOf<String, MutableStateFlow<Date?>>()
     //Call DB actions in a coroutine scope to avoid blocking the UI thread
+
     fun callSuspendUser(user:User){
         LoadingStateManager.setIsLoading(true)
         viewModelScope.launch {
@@ -38,9 +38,27 @@ class UsersViewModel : ViewModel() {
             unSuspendUser(user)
         }
     }
-    fun callGetSuspendDate(user: User){
+
+    fun getSuspendDate(user: User): StateFlow<Date?> {
+        val userId = user.uid
+        if (!suspendDateMap.containsKey(userId)) {
+            suspendDateMap[userId] = MutableStateFlow(null)
+            fetchSuspendDate(user)
+        }
+        return suspendDateMap[userId]!!.asStateFlow()
+    }
+
+    private fun fetchSuspendDate(user: User) {
         viewModelScope.launch {
-            _suspendDate.value = getSuspendDate(user)
+            val userId = user.uid
+            val db = FirebaseFirestore.getInstance()
+            db.collection("SuspendedUsers").document(userId).snapshots().map { snapshot ->
+                val date = snapshot.getTimestamp("suspendedDate")?.toDate()
+                date
+            }.collect { date ->
+                suspendDateMap[userId]?.value = date
+                Log.i("CollectSuspendDate", "Date collected for $userId: $date")
+            }
         }
     }
 
@@ -74,7 +92,6 @@ class UsersViewModel : ViewModel() {
                         Log.w("SuspendUser", "Error adding user in Suspended Users Collection ${e.message})", e)
                         LoadingStateManager.setErrorMessage(e.message ?: "\"Error Suspending User\"")
                     }
-                _suspendDate.value = oneWeekFromNow
             }
             .addOnFailureListener{ e ->
                 Log.w("SuspendUser", "Error Updating User in Users Collection ${e.message})", e)
@@ -93,8 +110,7 @@ class UsersViewModel : ViewModel() {
             .addOnSuccessListener {
                 Log.i("BanUser", "User Ref Deleted Successfully")
                 val removedUser = hashMapOf(
-                    "email" to user.email,
-                    "isBanned" to true
+                    "email" to user.email
                 )
                 // Place the new user in the banned users collection
                 removedUsersRef.set(removedUser)
@@ -111,22 +127,6 @@ class UsersViewModel : ViewModel() {
                 Log.w("BanUser", "Error Deleting User in Users Collection ${e.message})", e)
                 LoadingStateManager.setErrorMessage(e.message ?: "\"Error Banning User\"")
             }
-    }
-
-    private suspend fun getSuspendDate(user: User): Date?{
-        if(!user.isSuspended){
-            return null
-        }
-        val db = FirebaseFirestore.getInstance()
-        val suspendedUserRef = db.collection("SuspendedUsers").document(user.uid)
-
-        val suspendedUserDoc = suspendedUserRef.get().await()
-        return if(suspendedUserDoc.exists()){
-            val suspendDate = suspendedUserDoc.getTimestamp("suspendedDate")
-            suspendDate?.toDate()
-        }else {
-            null
-        }
     }
 
     private fun unSuspendUser(user: User){

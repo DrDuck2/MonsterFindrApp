@@ -20,12 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.RequestsRepository
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
 
 @Composable
 fun RequestsScreen(navController: NavController, viewModel: RequestsViewModel) {
 
+    AuthenticationManager.navigateOnLoginFault(navController)
+    AuthenticationManager.navigateOnAdminFault(navController)
     //On back return to the main screen
     BackHandler {
         navController.navigate("AdminDashboardScreen")
