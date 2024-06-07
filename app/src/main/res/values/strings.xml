@@ -1,4 +1,3 @@
 <resources>
-    <string name="app_name">MonsterFindrApp</string>
-    <string name="title_activity_maps">MapsActivity</string>
+    <string name="app_name">MonsterFindr</string>
 </resources>

@@ -21,20 +21,29 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import com.example.monsterfindrapp.R
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.monsterfindrapp.viewModel.LoginRegisterViewModel
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.model.LoginState
 import com.example.monsterfindrapp.model.RegisterState
+
 
 @Composable
 fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterViewModel) {
@@ -61,7 +70,9 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
 
     var showError by remember { mutableStateOf(false) }
     val passwordVisible = remember { mutableStateOf(false) }
-
+    val customFontFamily = FontFamily(
+        Font(R.font.green_energy)
+    )
 
     Column(
         modifier = Modifier
@@ -70,6 +81,15 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(text = "MonsterFindr",
+            style = TextStyle(
+                fontWeight = FontWeight.Bold,
+                fontSize = 56.sp,
+                color = Color(ContextCompat.getColor(LocalContext.current, R.color.darkGreen)),
+                fontFamily = customFontFamily
+            )
+        )
+        Spacer(modifier = Modifier.height(32.dp))
         OutlinedTextField(
             value = loginEmail,
             onValueChange = { loginEmail = it },
@@ -97,14 +117,22 @@ fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterVi
         if (showError) {
             Text(text = "Please fill in all fields", color = Color.Red)
         }
-        Button(onClick = {
+        Button(
+            onClick = {
             if(loginPassword.isEmpty() || loginEmail.isEmpty()){
                 showError = true
             }else{
                 showError = false
                 viewModel.login(loginEmail, loginPassword)
             }
-        }) {
+        },
+            colors = ButtonColors(
+                containerColor = Color(ContextCompat.getColor(LocalContext.current, R.color.darkGreen)),
+                contentColor = Color.Black,
+                disabledContainerColor = Color(ContextCompat.getColor(LocalContext.current, R.color.darkGreen)),
+                disabledContentColor = Color.Black
+            )
+            ) {
             Text("Login")
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -166,6 +194,7 @@ fun RegisterModal(
 
     val passwordVisible = remember { mutableStateOf(false) }
     val repeatPasswordVisible = remember {mutableStateOf(false)}
+
 
     Dialog(onDismissRequest = onDismiss){
         Surface(color = MaterialTheme.colorScheme.background){
@@ -233,7 +262,13 @@ fun RegisterModal(
                         showError = false
                         onRegister(registerEmail, registerPassword, repeatPassword)
                     }
-                }){
+                },
+                    colors = ButtonColors(
+                        containerColor = Color(ContextCompat.getColor(LocalContext.current, R.color.darkGreen)),
+                        contentColor = Color.Black,
+                        disabledContainerColor = Color(ContextCompat.getColor(LocalContext.current, R.color.darkGreen)),
+                        disabledContentColor = Color.Black
+                    )){
                     Text("Register")
                 }
                 when(registerState){
