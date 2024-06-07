@@ -12,6 +12,7 @@ import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -79,63 +80,29 @@ class LoginRegisterViewModel : ViewModel() {
             var isSuspended: Boolean? = null
             var isBanned = false
 
-            checkUserSuspended(email, callback = { result ->
-               isSuspended = result
-            })
-            checkUserBanned(email, callback = { result ->
-                isBanned = result
-            })
-            if(isBanned){
-                _loginState.value = LoginState.Error(message = "User Is Banned")
-            }else if(isSuspended == true){
-                _loginState.value = LoginState.Error(message = "User Is Suspended")
-            }else{
-                try {
-                    val auth = Firebase.auth
-                    auth.signInWithEmailAndPassword(email, password).await()
-                    addUserToDatabase(email)
-                } catch (e: Exception) {
-                    _loginState.value = LoginState.Error(e.message ?: "Unknown Error")
-                }
-            }
-        }
-    }
-
-    private fun checkUserSuspended(email: String, callback: (Boolean?) -> Unit) {
-        val db = FirebaseFirestore.getInstance()
-        viewModelScope.launch {
-            val isSuspended = withContext(Dispatchers.IO) {
-                try {
-                    val querySnapshot = db.collection("Users").whereEqualTo("email", email).get().await()
-                    if (querySnapshot.documents.isNotEmpty()) {
-                        val userDoc = querySnapshot.documents[0]
-                        userDoc.getBoolean("isSuspended")
-                    } else {
-                        null
+            AuthenticationManager.checkUserSuspended(email, callback = { suspended ->
+               isSuspended = suspended
+                AuthenticationManager.checkUserBanned(email, callback = { banned ->
+                    isBanned = banned
+                    if(isBanned){
+                        _loginState.value = LoginState.Error(message = "User Is Banned")
+                    }else if(isSuspended == true){
+                        _loginState.value = LoginState.Error(message = "User Is Suspended")
+                    }else{
+                        try {
+                            val auth = Firebase.auth
+                            viewModelScope.launch {
+                                auth.signInWithEmailAndPassword(email, password).await()
+                                addUserToDatabase(email)
+                            }
+                        } catch (e: Exception) {
+                            _loginState.value = LoginState.Error(e.message ?: "Unknown Error")
+                        }
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-            }
-            callback(isSuspended)
+                })
+            })
         }
     }
 
-    private fun checkUserBanned(email: String, callback: (Boolean) -> Unit) {
-        val db = FirebaseFirestore.getInstance()
-        viewModelScope.launch {
-            val isBanned = withContext(Dispatchers.IO) {
-                try {
-                    val querySnapshot = db.collection("BannedUsers").whereEqualTo("email", email).get().await()
-                    querySnapshot.documents.isNotEmpty()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    false
-                }
-            }
-            callback(isBanned)
-        }
-    }
 
 }

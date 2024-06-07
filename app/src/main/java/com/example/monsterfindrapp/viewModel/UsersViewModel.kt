@@ -18,7 +18,6 @@ import java.util.Date
 class UsersViewModel : ViewModel() {
 
     private val suspendDateMap = mutableMapOf<String, MutableStateFlow<Date?>>()
-    //Call DB actions in a coroutine scope to avoid blocking the UI thread
 
     fun callSuspendUser(user:User){
         LoadingStateManager.setIsLoading(true)
@@ -104,6 +103,17 @@ class UsersViewModel : ViewModel() {
         val userRef = db.collection("Users").document(user.uid)
         // Reference to the new Banned Users Collection
         val removedUsersRef = db.collection("BannedUsers").document(user.uid)
+
+        if(user.isSuspended){
+            val suspendedUserRef = db.collection("SuspendedUsers").document(user.uid)
+            suspendedUserRef.delete()
+                .addOnSuccessListener {
+                    Log.i("BanUser", "User Removed From Suspended Users Collection Successfully")
+                }
+                .addOnFailureListener{ e->
+                    Log.e("BanUser", "Error When Trying To Remove User From Suspended Users Collection ${e.message})", e)
+                }
+        }
 
         //Delete the user from the Users collection
         userRef.delete()

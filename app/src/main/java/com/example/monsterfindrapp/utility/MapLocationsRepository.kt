@@ -78,7 +78,6 @@ object MapLocationsRepository {
         val list: Flow<List<Locations>> = if(query.isEmpty()){
             _locations.asStateFlow()
         }else{
-            LoadingStateManager.setSmallLoading(true)
             _locations.asStateFlow().map { locations ->
                 locations.filter { location ->
                     location.items.map { storeItems ->

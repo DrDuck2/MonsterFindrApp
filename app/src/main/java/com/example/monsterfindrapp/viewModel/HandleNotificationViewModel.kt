@@ -31,25 +31,55 @@ class HandleNotificationViewModel : ViewModel() {
         _selectedDrink.value = drink
     }
 
+
+//    val userDocRef = db.collection("RequestEntries").document(currentUserId)
+//    userDocRef.set(emptyMap<String, Any>()) // Create if it doesn't exist
+//    .addOnSuccessListener {
+//        val requestsCollectionRef = userDocRef.collection("Requests")
+//
+//        val storeLocationDocRef = requestsCollectionRef.document(storeLocation.name)
+//
+//        storeLocationDocRef.set(entryData)
+//            .addOnSuccessListener {
+//                Log.i("RequestEntry", "Entry submitted successfully")
+//                LoadingStateManager.setIsSuccess(true)
+//            }
+//            .addOnFailureListener { e ->
+//                Log.e("RequestEntry", "Error submitting entry: $e", e)
+//                LoadingStateManager.setErrorMessage(e.message ?: "Error Submitting Entry")
+//            }
+//    }
+//    .addOnFailureListener { e ->
+//        Log.e("RequestEntry", "Error creating user document: $e", e)
+//        LoadingStateManager.setErrorMessage(e.message ?: "Error Submitting Entry")
+//    }
+
     fun submitNotification(){
         LoadingStateManager.setIsLoading(true)
 
         val db = FirebaseFirestore.getInstance()
         val userId = AuthenticationManager.getCurrentUserId()
-        val notificationRef = db.collection("Notifications").document(userId!!).collection("UserNotifications")
+        val userDocRef = db.collection("Notifications").document(userId!!)
+        userDocRef.set(emptyMap<String, Any>())
+            .addOnSuccessListener {
+                val notificationsCollectionRef = userDocRef.collection("UserNotifications")
+                val notificationData = hashMapOf(
+                    "item" to selectedDrink.value?.id
+                )
 
-        val notificationData = hashMapOf(
-            "item" to selectedDrink.value?.id
-        )
-
-        notificationRef.add(notificationData)
-            .addOnSuccessListener { documentReference ->
-                Log.d("SubmitNotification", "Notification added with ID: ${documentReference.id}")
-                LoadingStateManager.setIsSuccess(true)
-                _selectedDrink.value = null
+                notificationsCollectionRef.add(notificationData)
+                    .addOnSuccessListener { documentReference ->
+                        Log.d("SubmitNotification", "Notification added with ID: ${documentReference.id}")
+                        LoadingStateManager.setIsSuccess(true)
+                        _selectedDrink.value = null
+                    }
+                    .addOnFailureListener{ e->
+                        Log.e("SubmitNotification", "Error adding notification", e)
+                        LoadingStateManager.setErrorMessage(e.message ?: "\"Error Adding Notification To Database\"")
+                    }
             }
-            .addOnFailureListener{ e->
-                Log.w("SubmitNotification", "Error adding notification", e)
+            .addOnFailureListener{ e ->
+                Log.e("SubmitNotification", "Error adding notification", e)
                 LoadingStateManager.setErrorMessage(e.message ?: "\"Error Adding Notification To Database\"")
             }
     }

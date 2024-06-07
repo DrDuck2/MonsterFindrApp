@@ -369,7 +369,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                 } else {
                     isError = false
                     if (location == null) {
-                        viewModel.submitEntry(
+                        viewModel.callSubmitEntry(
                             selectedStoreLocation!!,
                             selectedDrink!!,
                             availability,
@@ -377,7 +377,7 @@ fun RequestEntryScreen(navController: NavController, viewModel: RequestEntryView
                             selectedImageUri!!
                         )
                     } else {
-                        viewModel.submitEntryCurrentLocation(
+                        viewModel.callSubmitEntryCurrentLocation(
                             location!!,
                             selectedDrink!!,
                             availability,

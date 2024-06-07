@@ -30,4 +30,5 @@ class MapViewModel : ViewModel() {
         _searchQuery.value = query
     }
 
+
 }

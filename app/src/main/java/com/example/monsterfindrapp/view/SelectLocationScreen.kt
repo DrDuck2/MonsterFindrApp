@@ -10,6 +10,7 @@ import androidx.navigation.NavController
 import com.example.monsterfindrapp.utility.MapLocationsRepository
 import com.example.monsterfindrapp.utility.PermissionLocationHandler
 import com.example.monsterfindrapp.R
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -24,6 +25,9 @@ import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
 fun SelectLocationScreen(navController: NavController, permissionLocationHandler: PermissionLocationHandler){
+
+    AuthenticationManager.navigateOnLoginFault(navController)
+
 
     val locations by MapLocationsRepository.locations.collectAsState()
 

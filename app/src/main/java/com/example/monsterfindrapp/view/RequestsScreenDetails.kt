@@ -81,7 +81,7 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
     val mapLocations by MapLocationsRepository.getGeoPoints().collectAsState(initial = emptyList())
 
     var showLocation by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
+    val showDialog = viewModel.showDialog.collectAsState()
     var showWarning by remember {mutableStateOf(false)}
 
     var isZoomed by remember {mutableStateOf(false)}
@@ -312,8 +312,8 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
         }
     }
     StoreNameDialog(
-        showDialog = showDialog,
-        onDismiss = { showDialog = false},
+        showDialog = showDialog.value,
+        onDismiss = { viewModel.setShowDialog(false)},
         onSubmit = {
             viewModel.addLocationAndApproveRequest(user =  user.value!!, request = selectedRequest.value!!,it)
         }
@@ -334,7 +334,7 @@ fun RequestsScreenDetails(navController: NavController, viewModel: RequestsViewM
                     onClick = {
                         if(requestWork == "Approve Request") {
                             if (selectedRequest.value!!.id.contains("NewLocation")) {
-                                showDialog = true
+                                viewModel.checkLocation(user =  user.value!!, request = selectedRequest.value!!)
                             } else {
                                 viewModel.approveRequest(
                                     user = user.value!!,

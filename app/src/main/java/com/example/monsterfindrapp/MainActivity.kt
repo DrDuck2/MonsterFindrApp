@@ -4,10 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.monsterfindrapp.utility.AuthenticationManager
 import com.example.monsterfindrapp.utility.PermissionLocationHandler
 import com.example.monsterfindrapp.view.AdminDashboardScreen
 import com.example.monsterfindrapp.view.HandleNotificationScreen
@@ -29,6 +33,7 @@ import com.example.monsterfindrapp.viewModel.LoginRegisterViewModel
 import com.example.monsterfindrapp.viewModel.MapViewModel
 import com.example.monsterfindrapp.viewModel.RequestEntryViewModel
 import com.example.monsterfindrapp.viewModel.RequestsViewModel
+import com.example.monsterfindrapp.viewModel.UserStatusViewModel
 import com.example.monsterfindrapp.viewModel.UsersViewModel
 
 
@@ -40,8 +45,25 @@ class MainActivity : ComponentActivity() {
         val requestsViewModel = RequestsViewModel()
         val permissionLocationHandler = PermissionLocationHandler(this, requestEntryViewModel)
         val storeItemsViewModel = StoreItemsViewModel()
+
+        val userStatusViewModel = ViewModelProvider(this)[UserStatusViewModel::class.java]
+        userStatusViewModel.checkUserStatus()
+
         setContent {
             val navController = rememberNavController()
+
+            val isUserSuspended by userStatusViewModel.isUserSuspended.observeAsState()
+            val isUserBanned by userStatusViewModel.isUserBanned.observeAsState()
+            LaunchedEffect(isUserSuspended, isUserBanned){
+                if(isUserSuspended == true || isUserBanned == true){
+                    AuthenticationManager.logout()
+                    navController.navigate("LoginRegisterScreen"){
+                        popUpTo("LoginRegisterScreen") {inclusive = true}
+                    }
+                }
+            }
+
+
             NavHost(navController = navController, startDestination = "LoginRegisterScreen"){
                 composable("LoginRegisterScreen"){
                     LoginRegisterScreen(navController = navController, LoginRegisterViewModel())

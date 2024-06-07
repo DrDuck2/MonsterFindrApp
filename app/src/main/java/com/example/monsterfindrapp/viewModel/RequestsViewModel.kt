@@ -3,9 +3,12 @@ package com.example.monsterfindrapp.viewModel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.monsterfindrapp.model.Locations
 import com.example.monsterfindrapp.utility.LoadingStateManager
 import com.example.monsterfindrapp.model.RequestLocations
 import com.example.monsterfindrapp.model.RequestUser
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
@@ -24,6 +27,13 @@ class RequestsViewModel: ViewModel() {
     val user: StateFlow<RequestUser?> = _selectedUser.asStateFlow()
     private val _selectedRequest = MutableStateFlow<RequestLocations?>(null)
     val selectedRequest: StateFlow<RequestLocations?> = _selectedRequest.asStateFlow()
+
+    private val _showDialog = MutableStateFlow(false)
+    val showDialog: StateFlow<Boolean> = _showDialog.asStateFlow()
+
+    fun setShowDialog(value: Boolean){
+        _showDialog.value = value
+    }
 
     fun selectUser(selectedUser: RequestUser,user: Flow<List<RequestLocations>>) {
         _selectedUser.value = selectedUser
@@ -94,6 +104,8 @@ class RequestsViewModel: ViewModel() {
         }
     }
 
+
+
     fun approveRequest(user: RequestUser, request: RequestLocations,id: String) {
         val db = Firebase.firestore
         viewModelScope.launch {
@@ -121,5 +133,53 @@ class RequestsViewModel: ViewModel() {
             }
             removeRequest(user, request)
         }
+    }
+
+    fun checkLocation(user: RequestUser, request: RequestLocations){
+        viewModelScope.launch {
+            checkWithExistingLocations(request.coordinates) {isSimilar ->
+                if(isSimilar != null){
+                    approveRequest(user, request, isSimilar.name)
+                }else{
+                    _showDialog.value = true
+                }
+            }
+        }
+    }
+
+    private suspend fun checkWithExistingLocations(sentLocation: GeoPoint, callback:(Locations?) -> Unit){
+        val db = FirebaseFirestore.getInstance()
+
+        try {
+            val locationsRef = db.collection("Locations").get().await()
+            for(document in locationsRef.documents){
+                val dbLocation = document.getGeoPoint("coordinates")
+                if(dbLocation != null){
+                    if(areCoordinatesSimilar(sentLocation, dbLocation))
+                    {
+                        val doc = Locations(
+                            name = document.id,
+                            location = dbLocation,
+                            items = emptyFlow()
+                        )
+                        callback(doc)
+                        return
+                    }
+                }
+            }
+            callback(null)
+        }catch (e: Exception){
+            e.printStackTrace()
+            callback(null)
+        }
+    }
+
+    private fun areCoordinatesSimilar(coordinates1: GeoPoint, coordinates2: GeoPoint): Boolean{
+        val roundedLat1 = "%.3f".format(coordinates1.latitude).toDouble()
+        val roundedLon1 = "%.3f".format(coordinates1.longitude).toDouble()
+        val roundedLat2 = "%.3f".format(coordinates2.latitude).toDouble()
+        val roundedLon2 = "%.3f".format(coordinates2.longitude).toDouble()
+
+        return roundedLat1 == roundedLat2 && roundedLon1 == roundedLon2
     }
 }

@@ -40,8 +40,12 @@ import com.example.monsterfindrapp.model.RegisterState
 fun LoginRegisterScreen(navController: NavController, viewModel: LoginRegisterViewModel) {
     // If user is Admin Go to AdminDashboardScreen otherwise go to MapScreen
     if(AuthenticationManager.isUserAuthenticated()){
-        AuthenticationManager.checkUserIsAdmin { isAdmin ->
-            if(isAdmin) navController.navigate("AdminDashboardScreen") else navController.navigate("MapScreen")}
+        AuthenticationManager.navigateOnUserRestricted{ isRestricted ->
+            if(isRestricted == false){
+                AuthenticationManager.checkUserIsAdmin { isAdmin ->
+                    if(isAdmin) navController.navigate("AdminDashboardScreen") else navController.navigate("MapScreen")}
+            }
+        }
     // If user not logged in
     }else{
         // On Back press close the app

@@ -15,6 +15,7 @@ fun MapScreen(navController: NavController, viewModel: MapViewModel) {
     val isMapExpanded by viewModel.isMapExpanded
 
     AuthenticationManager.navigateOnLoginFault(navController)
+
     BackHandler {
         if (!isMapExpanded) {
             viewModel.isMapExpanded.value = true

@@ -130,6 +130,7 @@ fun StoresScreen(navController: NavController, viewModel: StoreItemsViewModel, p
             onDismiss = {permissionLocationHandler.clearState()
                 showAddStoreModal = false},
             onSubmit = { name, lat, long ->
+                showAddStoreModal = false
                 viewModel.addStore(name, lat, long)
             },
             permissionLocationHandler,

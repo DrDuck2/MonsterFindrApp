@@ -41,8 +41,6 @@ import com.example.monsterfindrapp.viewModel.HandleNotificationViewModel
 fun HandleNotificationScreen(navController: NavController, viewModel: HandleNotificationViewModel){
 
     AuthenticationManager.navigateOnLoginFault(navController)
-    AuthenticationManager.navigateOnAdminFault(navController)
-
     val userNotifications = viewModel.userNotifications.collectAsState()
 
     val isLoading by LoadingStateManager.isLoading.collectAsState()
@@ -53,7 +51,7 @@ fun HandleNotificationScreen(navController: NavController, viewModel: HandleNoti
         if(showNotification){
             showNotification = false
         }else{
-            navController.navigate("AdminDashboardScreen")
+            navController.popBackStack()
         }
     }
 
